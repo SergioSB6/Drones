@@ -41,21 +41,36 @@ label.pack(pady=20)
 def boton_click():
     mostrar_frame(frame_menu)
 
-boton = ctk.CTkButton(master=frame_titulo, text="Play!", font=("M04_FATAL FURY", 50), fg_color="transparent", hover=False, command=boton_click, width=300, height=50)
-boton.pack(pady=100, padx=0, side="bottom")  # Agregar margen alrededor del botón
+boton_play = ctk.CTkButton(master=frame_titulo, text="Play!", font=("M04_FATAL FURY", 50), fg_color="transparent", hover=False, command=boton_click, width=300, height=50)
+boton_play.pack(pady=100, padx=0, side="bottom")
 
-# Función para aumentar el tamaño del botón al pasar el ratón
-def on_enter(event):
-    boton.configure(font=("M04_FATAL FURY", 70))  # Cambia el tamaño del texto o botón
+# ================== EFECTO DE REBOTE (AMPLIAR Y DESAMPLIAR) ==================
+# Variables de control para el tamaño del botón
+increase = True  # Indica si estamos ampliando o reduciendo el botón
+current_size = 50  # Tamaño inicial del texto
 
-# Función para restaurar el tamaño original al salir el ratón
-def on_leave(event):
-   boton.configure(font=("M04_FATAL FURY", 50))  # Vuelve al tamaño normal
+# Función para hacer el efecto de rebote
+def bounce_button():
+    global increase, current_size
 
+    # Incrementa o reduce el tamaño
+    if increase:
+        current_size += 1  # Aumenta el tamaño del texto
+        if current_size >= 60:  # Tamaño máximo
+            increase = False  # Cambia la dirección para reducir
+    else:
+        current_size -= 1  # Reduce el tamaño del texto
+        if current_size <= 50:  # Tamaño mínimo
+            increase = True  # Cambia la dirección para aumentar
 
-# Asignar eventos al botón
-boton.bind("<Enter>", on_enter)  # Evento al pasar el ratón
-boton.bind("<Leave>", on_leave)  # Evento al salir el ratón
+    # Aplica el nuevo tamaño al botón
+    boton_play.configure(font=("M04_FATAL FURY", current_size))
+
+    # Llama a la función de nuevo después de 50 milisegundos
+    ventana.after(50, bounce_button)
+
+# Inicia el efecto de rebote en el botón de Play
+bounce_button()
 
 # ================== CONTENIDO DEL MENÚ PRINCIPAL ==================
 
@@ -81,8 +96,8 @@ boton_tag._text_label.configure(wraplength=400)
 def Editor_mapas():
     mostrar_frame(frame_Editor_mapas)
 
-boton_editorMap = ctk.CTkButton(master=frame_menu, text="Map Editor", font=("M04_FATAL FURY", 30), fg_color="transparent",hover=False, command=Editor_mapas)
-boton_editorMap.place(relx=0.99, rely=0.95, anchor="se")
+boton_editorMap = ctk.CTkButton(master=frame_menu, text="Map Editor", font=("M04_FATAL FURY", 35), fg_color="transparent",hover=False, command=Editor_mapas)
+boton_editorMap.place(relx=0.85, rely=0.95, anchor="s")
 boton_editorMap._text_label.configure(wraplength=400)
 
 # volver al titulo
