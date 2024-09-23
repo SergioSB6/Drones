@@ -1,16 +1,17 @@
 import customtkinter as ctk
 
+
 # ================= DASHBOARD INICIAL =================
 
 ctk.set_appearance_mode("dark")  # Modo oscuro
-ctk.set_default_color_theme("blue")  # Tema por defecto (colores)
+ctk.set_default_color_theme("blue")  # Tema por defecto
 
 # Función para cambiar de marco
 def mostrar_frame(frame):
     frame.tkraise()  # Mueve el marco especificado al frente, ocultando los otros
 
 # Crear la ventana principal
-ventana = ctk.CTk()  # Crear la ventana usando customtkinter
+ventana = ctk.CTk()  # Crear la ventana
 ventana.geometry("1280x720")  # Tamaño de la ventana
 ventana.title("Ventana principal")
 
@@ -20,29 +21,37 @@ ventana.title("Ventana principal")
 frame_titulo = ctk.CTkFrame(master=ventana)  # Primer marco (titulo)
 frame_titulo.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
 
-frame_juego = ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
-frame_juego.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
+frame_menu = ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
+frame_menu.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
 
+frame_tag= ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
+frame_tag.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
+
+frame_CheckPoint= ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
+frame_CheckPoint.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
+
+frame_Editor_mapas= ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
+frame_Editor_mapas.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
 # ================== CONTENIDO DEL TITULO ==================
-
+mostrar_frame(frame_titulo)
 # Agregar una etiqueta de texto
-label = ctk.CTkLabel(master=ventana, text="DroneLab",  font=("M04_FATAL FURY", 80))
+label = ctk.CTkLabel(master=frame_titulo, text="DroneLab",  font=("M04_FATAL FURY", 80))
 label.pack(pady=20)
+# Agregar un botón a la ventana
+def boton_click():
+    mostrar_frame(frame_menu)
+
+boton = ctk.CTkButton(master=frame_titulo, text="Play!", font=("M04_FATAL FURY", 50), fg_color="transparent", hover=False, command=boton_click, width=300, height=50)
+boton.pack(pady=100, padx=0, side="bottom")  # Agregar margen alrededor del botón
 
 # Función para aumentar el tamaño del botón al pasar el ratón
 def on_enter(event):
-    event.widget.configure(font=("M04_FATAL FURY", 60))  # Cambia el tamaño del texto o botón
+    boton.configure(font=("M04_FATAL FURY", 70))  # Cambia el tamaño del texto o botón
 
 # Función para restaurar el tamaño original al salir el ratón
 def on_leave(event):
-    event.widget.configure(font=("M04_FATAL FURY", 50))  # Vuelve al tamaño normal
+   boton.configure(font=("M04_FATAL FURY", 50))  # Vuelve al tamaño normal
 
-# Agregar un botón a la ventana
-def boton_click():
-    mostrar_frame(frame_juego)
-
-boton = ctk.CTkButton(master=ventana, text="Play!",  font=("M04_FATAL FURY", 50), fg_color="transparent",hover_color="none", command=boton_click, width=300, height=50)
-boton.pack(pady=100, padx=100, side="bottom")  # Agregar margen alrededor del botón
 
 # Asignar eventos al botón
 boton.bind("<Enter>", on_enter)  # Evento al pasar el ratón
@@ -50,5 +59,62 @@ boton.bind("<Leave>", on_leave)  # Evento al salir el ratón
 
 # ================== CONTENIDO DEL MENÚ PRINCIPAL ==================
 
+# Agregar una etiqueta y botón en el marco del juego
+label_select = ctk.CTkLabel(master=frame_menu, text="Select game", font=("M04_FATAL FURY", 70))
+label_select.pack(pady=20, side="top")
+
+#Seleccionar juegos
+def tag():
+    mostrar_frame(frame_tag)
+
+boton_tag = ctk.CTkButton(master=frame_menu, text="Tag", font=("M04_FATAL FURY", 35), fg_color="transparent",hover=False, command=tag)
+boton_tag.place(relx=0.3, rely=0.4, anchor="center")
+
+def CheckPoint():
+    mostrar_frame(frame_CheckPoint)
+
+boton_tag = ctk.CTkButton(master=frame_menu, text="CheckPoints race", font=("M04_FATAL FURY", 35), fg_color="transparent",hover=False, command=CheckPoint)
+boton_tag.place(relx=0.7, rely=0.4, anchor="center")
+boton_tag._text_label.configure(wraplength=400)
+
+#Editor de mapas
+def Editor_mapas():
+    mostrar_frame(frame_Editor_mapas)
+
+boton_editorMap = ctk.CTkButton(master=frame_menu, text="Map Editor", font=("M04_FATAL FURY", 30), fg_color="transparent",hover=False, command=Editor_mapas)
+boton_editorMap.place(relx=0.99, rely=0.95, anchor="se")
+boton_editorMap._text_label.configure(wraplength=400)
+
+# volver al titulo
+def volver_titulo():
+    mostrar_frame(frame_titulo)
+
+boton_volver = ctk.CTkButton(master=frame_menu, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_titulo)
+boton_volver.place(relx=0.01, rely=0.95, anchor="sw")
+
+# ================== CONTENIDO DEL TAG ==================
+label_tag = ctk.CTkLabel(master=frame_tag, text="Welcome to Tag mode!", font=("M04_FATAL FURY", 35))
+label_tag.pack(pady=20)
+
+# volver al titulo
+def volver_menu():
+    mostrar_frame(frame_menu)
+
+boton_volver1 = ctk.CTkButton(master=frame_tag, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
+boton_volver1.place(relx=0.01, rely=0.95, anchor="sw")
+
+# ================== CONTENIDO DEL CHECKPOINT==================
+label_tag = ctk.CTkLabel(master=frame_CheckPoint, text="Welcome to CheckPoint Race mode!", font=("M04_FATAL FURY", 35))
+label_tag.pack(pady=20)
+
+boton_volver2 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
+boton_volver2.place(relx=0.01, rely=0.95, anchor="sw")
+
+# ================== CONTENIDO DEL EDITOR DE MAPAS==================
+label_tag = ctk.CTkLabel(master=frame_Editor_mapas, text="Welcome to Map Editor!", font=("M04_FATAL FURY", 35))
+label_tag.pack(pady=20)
+
+boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
+boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
 # Ejecutar la ventana principal
 ventana.mainloop()
