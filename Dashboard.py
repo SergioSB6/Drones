@@ -1,5 +1,6 @@
 from tkinter import Menubutton
-
+import Controles_Admin
+import subprocess
 import customtkinter as ctk
 
 
@@ -104,7 +105,7 @@ def mostrar_menu():
 # Funciones para cada opción del menú
 def abrir_configuracion_avanzada():
     print("Abrir configuración avanzada")
-#controles Admin
+    subprocess.Popen(['python', 'Controles_Admin.py'])
 
 def ajustar_sonido():
     print("Ajustar sonido")
