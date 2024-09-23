@@ -1,3 +1,5 @@
+from tkinter import Menubutton
+
 import customtkinter as ctk
 
 
@@ -78,6 +80,41 @@ bounce_button()
 label_select = ctk.CTkLabel(master=frame_menu, text="Select game", font=("M04_FATAL FURY", 70))
 label_select.pack(pady=20, side="top")
 
+
+# Crear una función para mostrar el menú desplegable
+def mostrar_menu():
+    # Crear un frame para que actúe como menú desplegable
+    menu_frame = ctk.CTkFrame(frame_menu, width=150, height=100, corner_radius=10)
+    menu_frame.place(x=10, y=50)  # Posicionar debajo del botón de engranaje
+
+    # Crear botones dentro del menú desplegable
+    boton_configuracion = ctk.CTkButton(menu_frame, text="Configuración avanzada", command=abrir_configuracion_avanzada,width=130, height=30)
+    boton_configuracion.pack(pady=5)
+
+    boton_sonido = ctk.CTkButton(menu_frame, text="Sonido", command=ajustar_sonido, width=130, height=30)
+    boton_sonido.pack(pady=5)
+
+    # Ocultar el menú al hacer clic en cualquier parte de la pantalla
+    def ocultar_menu(event):
+        menu_frame.place_forget()
+
+    frame_menu.bind("<Button-1>", ocultar_menu)
+
+
+# Funciones para cada opción del menú
+def abrir_configuracion_avanzada():
+    print("Abrir configuración avanzada")
+#controles Admin
+
+def ajustar_sonido():
+    print("Ajustar sonido")
+
+
+# Crear el botón con forma de engranaje
+icono_engrane = ctk.CTkButton(frame_menu, text="⚙️", width=30, height=30, command=mostrar_menu)
+icono_engrane.place(x=10, y=10)  # Posicionar en la esquina superior izquierda
+
+
 #Seleccionar juegos
 def tag():
     mostrar_frame(frame_tag)
@@ -131,5 +168,6 @@ label_tag.pack(pady=20)
 
 boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
 boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
+
 # Ejecutar la ventana principal
 ventana.mainloop()
