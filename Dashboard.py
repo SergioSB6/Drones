@@ -1,8 +1,7 @@
+import os
 from tkinter import Menubutton
-import Controles_Admin
-import subprocess
 import customtkinter as ctk
-
+from Dron import Dron
 
 # ================= DASHBOARD INICIAL =================
 
@@ -105,7 +104,7 @@ def mostrar_menu():
 # Funciones para cada opción del menú
 def abrir_configuracion_avanzada():
     print("Abrir configuración avanzada")
-    subprocess.Popen(['python', 'Controles_Admin.py'])
+    os.system("python Controles_Admin.py")
 
 def ajustar_sonido():
     print("Ajustar sonido")
@@ -169,6 +168,7 @@ label_tag.pack(pady=20)
 
 boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
 boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
+
 
 # Ejecutar la ventana principal
 ventana.mainloop()
