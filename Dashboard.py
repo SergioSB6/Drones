@@ -2,9 +2,11 @@ import os
 from tkinter import Menubutton
 import customtkinter as ctk
 from Dron import Dron
+from Editor_Mapa import MapFrameClass
 
 # ================= DASHBOARD INICIAL =================
-
+global dron
+dron = Dron()
 ctk.set_appearance_mode("dark")  # Modo oscuro
 ctk.set_default_color_theme("blue")  # Tema por defecto
 
@@ -130,12 +132,42 @@ boton_tag.place(relx=0.7, rely=0.4, anchor="center")
 boton_tag._text_label.configure(wraplength=400)
 
 #Editor de mapas
+# abrimos el mapa
+def showmap():
+    global dron
+
+    # Limpiar el contenido previo del marco frame_Editor_mapas (por si hay algo previo)
+    for widget in frame_Editor_mapas.winfo_children():
+        widget.destroy()
+
+    # ================== CONTENIDO DEL EDITOR DE MAPAS ==================
+    label_tag = ctk.CTkLabel(master=frame_Editor_mapas, text="Welcome to Map Editor!", font=("M04_FATAL FURY", 35))
+    label_tag.pack(pady=20)
+
+    # Inicializamos la clase del mapa con el dron y el frame_Editor_mapas como fatherFrame
+    map_frame_class = MapFrameClass(dron, frame_Editor_mapas)
+
+    # Construimos el frame del mapa dentro del frame_Editor_mapas en lugar de una nueva ventana
+    map_frame = map_frame_class.buildFrame()
+
+    # Lo ajustamos para que ocupe todo el espacio
+    map_frame.pack(fill="both", expand=True)
+
+    boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30),
+                                   fg_color="transparent", hover=False, command=volver_menu)
+    boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
+
+    # Mostrar el frame del editor de mapas
+    mostrar_frame(frame_Editor_mapas)
+
+
 def Editor_mapas():
     mostrar_frame(frame_Editor_mapas)
 
-boton_editorMap = ctk.CTkButton(master=frame_menu, text="Map Editor", font=("M04_FATAL FURY", 35), fg_color="transparent",hover=False, command=Editor_mapas)
+boton_editorMap = ctk.CTkButton(master=frame_menu, text="Map Editor", font=("M04_FATAL FURY", 35), fg_color="transparent",hover=False, command=showmap)
 boton_editorMap.place(relx=0.85, rely=0.95, anchor="s")
 boton_editorMap._text_label.configure(wraplength=400)
+
 
 # volver al titulo
 def volver_titulo():
@@ -162,12 +194,8 @@ label_tag.pack(pady=20)
 boton_volver2 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
 boton_volver2.place(relx=0.01, rely=0.95, anchor="sw")
 
-# ================== CONTENIDO DEL EDITOR DE MAPAS==================
-label_tag = ctk.CTkLabel(master=frame_Editor_mapas, text="Welcome to Map Editor!", font=("M04_FATAL FURY", 35))
-label_tag.pack(pady=20)
 
-boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
-boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
+
 
 
 # Ejecutar la ventana principal
