@@ -136,10 +136,6 @@ boton_tag._text_label.configure(wraplength=400)
 def showmap():
     global dron
 
-    # Limpiar el contenido previo del marco frame_Editor_mapas (por si hay algo previo)
-    for widget in frame_Editor_mapas.winfo_children():
-        widget.destroy()
-
     # ================== CONTENIDO DEL EDITOR DE MAPAS ==================
     label_tag = ctk.CTkLabel(master=frame_Editor_mapas, text="Welcome to Map Editor!", font=("M04_FATAL FURY", 35))
     label_tag.pack(pady=20)
