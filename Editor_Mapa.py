@@ -13,6 +13,9 @@ class MapFrameClass:
         self.obstacle_positions = []  # Lista para almacenar las posiciones de los obstáculos
         self.selected_obstacle = None  # Atributo para el obstáculo seleccionado
         self.selected_mirror_obstacle = None  # Atributo para el obstáculo reflejado seleccionado
+        self.selected_mirror_obstacle = None  # Atributo para el obstáculo reflejado seleccionado
+        self.occupied_cells = set()  # Conjunto para almacenar las celdas ocupadas (col, row)
+        self.obstacles = []  # Lista de pares (obstacle_id, mirrored_obstacle_id)
 
         # Crear frame principal con scrollbar
         self.scrollbar_frame = ctk.CTkFrame(self.fatherFrame)
@@ -73,8 +76,11 @@ class MapFrameClass:
         try:
             self.obstacle_images["cuadrado"] = Image.open("assets/square.png").resize(
                 (self.current_obstacle_size, self.current_obstacle_size), Image.LANCZOS)
+            self.obstacle_images["Triangulo"] = Image.open("assets/triangle.png").resize(
+                (self.current_obstacle_size, self.current_obstacle_size), Image.LANCZOS)
         except FileNotFoundError:
-            messagebox.showerror("Error", "No se encontró la imagen del obstáculo en 'assets/square.png'.")
+
+            messagebox.showerror("Error", "No se encontró la imagen del obstáculo en '/assets.")
             self.obstacle_images["cuadrado"] = Image.new("RGB",
                                                          (self.current_obstacle_size, self.current_obstacle_size),
                                                          "red")  # Crear una imagen de reserva
@@ -155,9 +161,6 @@ class MapFrameClass:
         self.map_widget.bind("<Button-3>", self.add_marker_event)
         self.map_widget.bind("<Button-1>", self.select_obstacle)
 
-    import tkinter.messagebox as messagebox
-
-    import tkinter.messagebox as messagebox
 
     def add_marker_event(self, event):
         """Agrega un obstáculo con GeoFence en la zona activa y lo duplica en la otra zona."""
@@ -201,41 +204,55 @@ class MapFrameClass:
         cols_occupied = self.current_obstacle_size // self.cell_size
         rows_occupied = self.current_obstacle_size // self.cell_size
 
-        # Almacenar la posición del obstáculo original
-        self.obstacle_positions.append(
-            f"Obstáculo original: Columna {col}, Fila {row}, Tamaño {cols_occupied}x{rows_occupied}")
+        # Generar las celdas que ocupará el nuevo obstáculo
+        new_cells = {(col + i, row + j) for i in range(cols_occupied) for j in range(rows_occupied)}
 
-        # Agregar obstáculo en la primera mitad del mapa
+        # Verificar si alguna de las celdas ya está ocupada por otro obstáculo
+        if any(cell in self.occupied_cells for cell in new_cells):
+            messagebox.showerror("Error", "No se puede colocar el obstáculo sobre otro obstáculo.")
+            return
+
+        # Agregar el obstáculo y reflejarlo en la otra mitad del mapa
+        x = col * self.cell_size
+        y = row * self.cell_size
         if x + self.current_obstacle_size <= self.ancho_terreno_pixels / 2:
+
+            # Agregar obstáculo en la primera mitad del mapa
             obstacle_id = self.add_obstacle_with_geofence((x, y), cols_occupied, rows_occupied)
 
-            # Duplicar el obstáculo en la segunda mitad del mapa
+            # Duplicar en la segunda mitad del mapa
             mirrored_x = (self.ancho_terreno_pixels // 2) + (
-                        (self.ancho_terreno_pixels // 2) - x) - self.current_obstacle_size
+                    (self.ancho_terreno_pixels // 2) - x) - self.current_obstacle_size
             mirror_obstacle_id = self.add_obstacle_with_geofence((mirrored_x, y), cols_occupied, rows_occupied)
 
+            # Almacenar los IDs y actualizar las celdas ocupadas
             self.obstacles.append((obstacle_id, mirror_obstacle_id))
-
-            # Calcular la posición reflejada del obstáculo
             mirror_col = int(mirrored_x // self.cell_size)
-            self.obstacle_positions.append(
-                f"Obstáculo reflejado: Columna {mirror_col}, Fila {row}, Tamaño {cols_occupied}x{rows_occupied}")
+            mirror_cells = {(mirror_col + i, row + j) for i in range(cols_occupied) for j in range(rows_occupied)}
+            self.occupied_cells.update(new_cells | mirror_cells)
+            self.obstacle_positions.append(f"Obstáculo original: Celdas {sorted(new_cells)}")
+            self.obstacle_positions.append(f"Obstáculo reflejado: Celdas {sorted(mirror_cells)}")
 
         else:
             # Agregar obstáculo en la segunda mitad
             obstacle_id = self.add_obstacle_with_geofence((x, y), cols_occupied, rows_occupied)
 
-            # Duplicar el obstáculo en la primera mitad del mapa
+            # Duplicar en la primera mitad del mapa
             mirrored_x = (self.ancho_terreno_pixels // 2) - (
-            (x - (self.ancho_terreno_pixels // 2))) - self.current_obstacle_size
+                    x - (self.ancho_terreno_pixels // 2)) - self.current_obstacle_size
             mirror_obstacle_id = self.add_obstacle_with_geofence((mirrored_x, y), cols_occupied, rows_occupied)
 
+            # Almacenar los IDs y actualizar las celdas ocupadas
             self.obstacles.append((obstacle_id, mirror_obstacle_id))
-
-            # Calcular la posición reflejada del obstáculo
             mirror_col = int(mirrored_x // self.cell_size)
-            self.obstacle_positions.append(
-                f"Obstáculo reflejado: Columna {mirror_col}, Fila {row}, Tamaño {cols_occupied}x{rows_occupied}")
+            mirror_cells = {(mirror_col + i, row + j) for i in range(cols_occupied) for j in range(rows_occupied)}
+            self.occupied_cells.update(new_cells | mirror_cells)
+            self.obstacle_positions.append(f"Obstáculo original: Celdas {sorted(new_cells)}")
+            self.obstacle_positions.append(f"Obstáculo reflejado: Celdas {sorted(mirror_cells)}")
+
+            # Mostrar las coordenadas de todas las celdas ocupadas por el obstáculo
+        messagebox.showinfo("Posiciones de los obstáculos",
+                            f"{self.obstacle_positions[-2]}\n{self.obstacle_positions[-1]}")
 
     def add_obstacle_with_geofence(self, coords, cols_occupied, rows_occupied):
         """Añade un obstáculo en las coordenadas especificadas y dibuja su GeoFence."""
@@ -289,22 +306,6 @@ class MapFrameClass:
                 self.map_widget.itemconfig(obstacle, image=resized_icon)
                 self.resized_images[obstacle] = resized_icon
 
-    def delete_selected_obstacle(self):
-        """Borra el obstáculo seleccionado y su reflejo."""
-        if self.selected_obstacle:
-            # Eliminar el obstáculo seleccionado
-            self.map_widget.delete(self.selected_obstacle)
-            self.selected_obstacle = None  # Reiniciar la selección
-
-            # Buscar y eliminar el obstáculo reflejado correspondiente
-            for (obstacle_pair) in self.obstacles:
-                obstacle, geofence = obstacle_pair
-                if obstacle == self.selected_obstacle:
-                    self.map_widget.delete(geofence)  # Borrar el geofence
-                    self.obstacles.remove(obstacle_pair)  # Borrar del listado
-                    break
-
-            messagebox.showinfo("Eliminación", "Obstáculo eliminado con éxito.")
 
     def select_obstacle(self, event):
         """Selecciona el obstáculo al hacer clic en él."""
