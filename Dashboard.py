@@ -3,6 +3,47 @@ from tkinter import Menubutton
 import customtkinter as ctk
 from Dron import Dron
 from Editor_Mapa import MapFrameClass
+import platform
+import subprocess
+import sys
+import shutil
+
+
+def install_dependencies():
+    # Instala las bibliotecas necesarias si no están instaladas
+    try:
+        import customtkinter
+        import numpy
+        import PIL
+    except ImportError:
+        print("Instalando dependencias necesarias...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "customtkinter", "numpy", "pillow"])
+
+    # Instala la fuente personalizada
+    install_custom_font()
+
+def install_custom_font():
+    # Ruta a la fuente en la carpeta assets
+    font_path = os.path.join(os.getcwd(), 'assets', 'm04fatal_fury', 'm04.ttf')
+
+    if platform.system() == 'Windows':
+        # Copia la fuente a la carpeta de fuentes de Windows
+        try:
+            windows_fonts_dir = os.path.join(os.environ['WINDIR'], 'Fonts')
+            font_dest_path = os.path.join(windows_fonts_dir, 'm04.ttf')
+            if not os.path.isfile(font_dest_path):  # Evita copiar si ya está instalada
+                shutil.copy(font_path, font_dest_path)
+                print("Fuente instalada correctamente en Windows.")
+            else:
+                print("La fuente ya está instalada.")
+        except Exception as e:
+            print(f"No se pudo instalar la fuente: {e}")
+
+    else:
+        # Para sistemas operativos diferentes a Windows, muestra un mensaje informativo
+        print("Para otros sistemas, instala la fuente manualmente desde la carpeta assets/fonts.")
+
+install_dependencies()
 
 # ================= DASHBOARD INICIAL =================
 global dron
