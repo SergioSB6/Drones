@@ -3,6 +3,7 @@ from tkinter import Menubutton
 import customtkinter as ctk
 from Dron import Dron
 from Editor_Mapa import MapFrameClass
+from Checkpoint_screen import CheckpointScreen
 import platform
 import subprocess
 import sys
@@ -182,13 +183,30 @@ def tag():
 
 boton_tag = ctk.CTkButton(master=frame_menu, text="Tag", font=("M04_FATAL FURY", 35), fg_color="transparent", hover=False, command=tag)
 boton_tag.place(relx=0.3, rely=0.4, anchor="center")
+def showcheckpoint():
+    global dron
 
+    # Limpiar frame actual
+    for widget in frame_CheckPoint.winfo_children():
+        widget.destroy()
+
+    # Crear CheckpointScreen en frame_CheckPoint
+    checkpoint_screen = CheckpointScreen(dron, frame_CheckPoint)
+    boton_volver4 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30),
+                                  fg_color="transparent", hover=False, command=volver_menu)
+    boton_volver4.place(relx=0.01, rely=0.95, anchor="sw")
+    # Mostrar el frame del checkpoint
+    mostrar_frame(frame_CheckPoint)
+
+
+    mostrar_frame(frame_CheckPoint)
 def CheckPoint():
     mostrar_frame(frame_CheckPoint)
 
-boton_tag = ctk.CTkButton(master=frame_menu, text="CheckPoints race", font=("M04_FATAL FURY", 35), fg_color="transparent", hover=False, command=CheckPoint)
+boton_tag = ctk.CTkButton(master=frame_menu, text="CheckPoints race", font=("M04_FATAL FURY", 35), fg_color="transparent", hover=False, command=showcheckpoint)
 boton_tag.place(relx=0.7, rely=0.4, anchor="center")
 boton_tag._text_label.configure(wraplength=400)
+
 
 # Editor de mapas
 # Abrimos el mapa
@@ -233,9 +251,6 @@ boton_volver1.place(relx=0.01, rely=0.95, anchor="sw")
 # ================== CONTENIDO DEL CHECKPOINT ==================
 label_tag = ctk.CTkLabel(master=frame_CheckPoint, text="Welcome to CheckPoint Race mode!", font=("M04_FATAL FURY", 35))
 label_tag.pack(pady=20)
-
-boton_volver2 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
-boton_volver2.place(relx=0.01, rely=0.95, anchor="sw")
 
 # Ejecutar la ventana principal
 ventana.mainloop()

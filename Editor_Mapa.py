@@ -1,7 +1,8 @@
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
-from PIL import Image, ImageTk, ImageOps
-
+from PIL import Image, ImageTk
+import os
+import json
 
 class MapFrameClass:
     def __init__(self, dron, fatherFrame):
@@ -14,342 +15,342 @@ class MapFrameClass:
         self.selected_obstacle = None
         self.occupied_cells = set()
         self.obstacles = []
-        self.obstacle_type = "cuadrado"  # Tipo de obstáculo por defecto
-        self.rotation_angles = {}  # Almacena el ángulo de rotación para cada obstáculo
-
-        # Crear frame principal con scrollbar
-        self.scrollbar_frame = ctk.CTkFrame(self.fatherFrame)
-        self.scrollbar_frame.pack(fill='both', expand=True)
-
-        # Crear scrollbar
-        self.scrollbar_y = ctk.CTkScrollbar(self.scrollbar_frame, orientation="vertical")
-        self.scrollbar_y.pack(side="right", fill="y")
-
-        self.canvas = ctk.CTkCanvas(self.scrollbar_frame, yscrollcommand=self.scrollbar_y.set)
-        self.canvas.pack(side="left", fill="both", expand=True)
-
-        self.scrollbar_y.configure(command=self.canvas.yview)
-
-        # Crear otro frame dentro del canvas
-        self.MapFrame = ctk.CTkFrame(self.canvas)
-        self.canvas.create_window((0, 0), window=self.MapFrame, anchor='nw')
-
-        # Para que el canvas detecte el tamaño adecuado
-        self.MapFrame.bind("<Configure>", self.on_frame_configure)
-
-        self.background_label = None
-        self.current_obstacle_size = 27  # Tamaño inicial del obstáculo en píxeles
         self.resized_images = {}
-
-        # Inicializar las imágenes de los obstáculos
         self.obstacle_images = {}
-        self.load_obstacle_images()
 
-        # Ajuste de la escala para que la cuadrícula sea proporcional
-        self.cell_size = 27
+        # Ajustar dinámicamente el tamaño de las celdas
         self.ancho_terreno_metros = 32.00
         self.largo_terreno_metros = 74.00
+        self.cell_size = 0  # Se calculará dinámicamente
+
+        self.calculate_cell_size()
+        self.current_obstacle_size = self.cell_size
 
         self.ancho_terreno_pixels = int(self.ancho_terreno_metros * self.cell_size)
         self.largo_terreno_pixels = int(self.largo_terreno_metros * self.cell_size)
 
+        self.load_obstacle_images()
+        self.obstacle_counter = 0
         self.setup_ui()
         self.auto_create_geofence()
 
-    def buildFrame(self):
-        self.scrollbar_frame.pack(fill='both', expand=True)
-        return self.scrollbar_frame
+    def calculate_cell_size(self):
+        # Tamaño fijo del mapa especificado por el usuario
+        max_width = 1685
+        max_height = 1009
 
-    def on_frame_configure(self, event):
-        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+        cell_width = max_width / self.ancho_terreno_metros
+        cell_height = max_height / self.largo_terreno_metros
+
+        # Tomar el tamaño mínimo para evitar distorsión
+        self.cell_size = int(min(cell_width, cell_height))
+
+    def generate_obstacle_id(self):
+        self.obstacle_counter += 1
+        return self.obstacle_counter
 
     def load_obstacle_images(self):
         try:
             self.obstacle_images["cuadrado"] = Image.open("assets/square.png").resize(
-                (self.current_obstacle_size, self.current_obstacle_size), Image.LANCZOS)
-            self.obstacle_images["Triangulo"] = Image.open("assets/triangle.png").resize(
-                (self.current_obstacle_size, self.current_obstacle_size), Image.LANCZOS)
+                (self.cell_size, self.cell_size), Image.LANCZOS)
         except FileNotFoundError:
-            messagebox.showerror("Error", "No se encontró la imagen del obstáculo en '/assets.")
             self.obstacle_images["cuadrado"] = Image.new("RGB",
-                                                         (self.current_obstacle_size, self.current_obstacle_size),
-                                                         "red")
+                                                         (self.cell_size, self.cell_size), "red")
 
     def setup_ui(self):
-        self.MapFrame.grid_rowconfigure(0, weight=1)
-        self.MapFrame.grid_columnconfigure(0, weight=1)
-        self.MapFrame.grid_columnconfigure(1, weight=3)
+        # Configurar el layout principal
+        self.fatherFrame.grid_rowconfigure(0, weight=1)
+        self.fatherFrame.grid_columnconfigure(1, weight=1)
 
-        self.control_panel = ctk.CTkFrame(self.MapFrame, width=200)
-        self.control_panel.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-
-        # Añadir el desplegable para seleccionar el tipo de obstáculo
-        self.obstacle_selector = ctk.CTkOptionMenu(self.control_panel, values=["cuadrado", "Triangulo"],
-                                                   command=self.update_obstacle_type)
-        self.obstacle_selector.pack(pady=10)
-        self.obstacle_selector.set("cuadrado")  # Valor inicial del desplegable
-
+        # Crear panel de control (fijo a la izquierda)
+        self.control_panel = ctk.CTkFrame(self.fatherFrame, width=200)
+        self.control_panel.grid(row=0, column=0, sticky="ns")
         self.add_buttons()
 
-        self.map_widget = ctk.CTkCanvas(self.MapFrame, width=self.ancho_terreno_pixels,
-                                        height=self.largo_terreno_pixels)
-        self.map_widget.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        # Crear el mapa centrado
+        self.map_canvas = ctk.CTkCanvas(self.fatherFrame, width=1685, height=1009, bg="white")
+        self.map_canvas.grid(row=0, column=1, sticky="nsew")
 
         self.draw_grid()
-        self.map_widget.xview_moveto(0)
-        self.map_widget.yview_moveto(0)
-
-    def update_obstacle_type(self, selected_type):
-        """Actualiza el tipo de obstáculo seleccionado."""
-        self.obstacle_type = selected_type
+        self.map_canvas.bind("<Button-1>", self.select_obstacle)
+        self.map_canvas.bind("<Button-3>", self.add_marker_event)
 
     def add_buttons(self):
-        ctk.CTkButton(self.control_panel, text="Dibujar Obstáculo", command=self.draw_map_mode).pack(pady=10)
-        ctk.CTkButton(self.control_panel, text="Añadir Fondo", command=self.add_background).pack(pady=10)
-        ctk.CTkButton(self.control_panel, text="Aumentar tamaño", command=self.increase_obstacle_size).pack(pady=10)
-        ctk.CTkButton(self.control_panel, text="Disminuir tamaño", command=self.decrease_obstacle_size).pack(pady=10)
-        ctk.CTkButton(self.control_panel, text="Borrar Obstáculo Seleccionado",
-                      command=self.delete_selected_obstacle).pack(pady=10)
-        ctk.CTkButton(self.control_panel, text="Rotar Obstáculo", command=self.rotate_obstacle).pack(pady=10)
+        self.add_background_button = ctk.CTkButton(self.control_panel, text="Añadir Fondo", command=self.add_background)
+        self.add_background_button.pack(pady=10)
 
-    def draw_map_mode(self):
-        """Activa el modo de dibujo de obstáculos con GeoFence."""
-        messagebox.showinfo("Modo de Dibujo", "Haz clic derecho en el mapa para crear obstáculos con GeoFence.")
-        self.map_widget.bind("<Button-3>", self.add_marker_event)
-        self.map_widget.bind("<Button-1>", self.select_obstacle)
+        self.add_obstacle_button = ctk.CTkButton(self.control_panel, text="Añadir Obstáculo", command=self.add_marker_mode)
+        self.add_obstacle_button.pack(pady=10)
+
+        self.delete_button = ctk.CTkButton(self.control_panel, text="Borrar Obstáculo Seleccionado",
+                                           command=self.delete_selected_obstacle)
+        self.delete_button.pack(pady=10)
+
+        self.save_button = ctk.CTkButton(self.control_panel, text="Guardar Mapa", command=self.save_map)
+        self.save_button.pack(pady=10)
+
+        self.load_button = ctk.CTkButton(self.control_panel, text="Cargar Mapa", command=self.load_map)
+        self.load_button.pack(pady=10)
 
     def draw_grid(self):
-        self.map_widget.delete("grid")
+        for i in range(0, self.ancho_terreno_pixels, self.cell_size):
+            self.map_canvas.create_line(i, 0, i, self.largo_terreno_pixels, fill="blue", tag="grid")
+        for j in range(0, self.largo_terreno_pixels, self.cell_size):
+            self.map_canvas.create_line(0, j, self.ancho_terreno_pixels, j, fill="blue", tag="grid")
 
-        cols = self.ancho_terreno_pixels // self.cell_size
-        rows = self.largo_terreno_pixels // self.cell_size
-
-        for i in range(cols + 1):
-            self.map_widget.create_line(i * self.cell_size, 0, i * self.cell_size, self.largo_terreno_pixels,
-                                        tag='grid', fill='blue')
-
-        for j in range(rows + 1):
-            self.map_widget.create_line(0, j * self.cell_size, self.ancho_terreno_pixels, j * self.cell_size,
-                                        tag='grid', fill='blue')
-
-        mid_x = (self.ancho_terreno_pixels // 2) // self.cell_size * self.cell_size
-        self.map_widget.create_line(mid_x, 0, mid_x, self.largo_terreno_pixels, tag='grid', fill='red', width=3)
-
-        self.map_widget.create_line(0, self.largo_terreno_pixels, self.ancho_terreno_pixels, self.largo_terreno_pixels,
-                                    tag='grid', fill='red', width=3)
+        # Línea roja central
+        mid_x = self.ancho_terreno_pixels // 2
+        self.map_canvas.create_line(mid_x, 0, mid_x, self.largo_terreno_pixels, fill="red", width=3, tag="grid")
+        self.auto_create_geofence()
 
     def auto_create_geofence(self):
-        top_left = (0, 0)
-        top_right = (self.ancho_terreno_pixels, 0)
-        bottom_left = (0, self.largo_terreno_pixels)
-        bottom_right = (self.ancho_terreno_pixels, self.largo_terreno_pixels)
+        offset = 1  # Margen adicional para asegurar que las líneas sean visibles
+        self.map_canvas.create_line(offset, offset, self.ancho_terreno_pixels, offset, fill="red", width=3)
+        self.map_canvas.create_line(self.ancho_terreno_pixels - offset, offset, self.ancho_terreno_pixels - offset, self.largo_terreno_pixels, fill="red", width=3)
+        self.map_canvas.create_line(self.ancho_terreno_pixels - offset, self.largo_terreno_pixels - offset, offset, self.largo_terreno_pixels - offset, fill="red", width=3)
+        self.map_canvas.create_line(offset, self.largo_terreno_pixels - offset, offset, offset, fill="red", width=3)
 
-        self.geofencePoints = [top_left, top_right, bottom_right, bottom_left]
-
-        self.map_widget.create_line(top_left, top_right, fill="red", width=2, tags="geofence_line")
-        self.map_widget.create_line(top_right, bottom_right, fill="red", width=2, tags="geofence_line")
-        self.map_widget.create_line(bottom_right, bottom_left, fill="red", width=2, tags="geofence_line")
-        self.map_widget.create_line(bottom_left, top_left, fill="red", width=2, tags="geofence_line")
+    def add_marker_mode(self):
+        self.map_canvas.bind("<Button-3>", self.add_marker_event)
+        messagebox.showinfo("Modo de Añadir", "Haz clic derecho en el mapa para añadir un obstáculo.")
 
     def add_marker_event(self, event):
-        x = self.map_widget.canvasx(event.x)
-        y = self.map_widget.canvasy(event.y)
+        x = self.map_canvas.canvasx(event.x)
+        y = self.map_canvas.canvasy(event.y)
 
-        col = int(x // self.cell_size)
-        row = int(y // self.cell_size)
+        col, row = int(x // self.cell_size), int(y // self.cell_size)
+        new_cells = {(col, row)}
 
-        # Cálculo de cuántas celdas ocupa el obstáculo
-        cols_occupied = -(-self.current_obstacle_size // self.cell_size)  # Redondeo hacia arriba
-        rows_occupied = -(-self.current_obstacle_size // self.cell_size)  # Redondeo hacia arriba
-
-        # Generar las celdas que ocupará el nuevo obstáculo
-        new_cells = {(col + i, row + j) for i in range(cols_occupied) for j in range(rows_occupied)}
-
-        # Verificar si alguna de las celdas ya está ocupada por otro obstáculo
+        # Verificar si las celdas ya están ocupadas
         if any(cell in self.occupied_cells for cell in new_cells):
             messagebox.showerror("Error", "No se puede colocar el obstáculo sobre otro obstáculo.")
             return
 
-        # Verificar si el obstáculo se coloca dentro de los límites
-        if (col * self.cell_size + self.current_obstacle_size > self.ancho_terreno_pixels or
-                row * self.cell_size + self.current_obstacle_size > self.largo_terreno_pixels):
-            messagebox.showerror("Error", "No se puede colocar el obstáculo fuera de los límites del mapa.")
-            return
-
-        mid_x = self.ancho_terreno_pixels // 2
-        if (col * self.cell_size < mid_x and col * self.cell_size + self.current_obstacle_size > mid_x) or \
-                (col * self.cell_size >= mid_x and col * self.cell_size < mid_x + self.current_obstacle_size):
-            messagebox.showerror("Error", "No se puede colocar el obstáculo sobre el geofence.")
-            return
-
-        # Ajustar las coordenadas a la celda más cercana
+        # Añadir obstáculo original
         x = col * self.cell_size
         y = row * self.cell_size
+        obstacle_id = self.generate_obstacle_id()
+        obstacle = self.add_obstacle((x, y), obstacle_id)
 
-        # Agregar el obstáculo y su reflejo
-        obstacle_id = self.add_obstacle_with_geofence((x, y), cols_occupied, rows_occupied)
-        mirrored_x = (self.ancho_terreno_pixels // 2) + (
-                (self.ancho_terreno_pixels // 2) - x) - self.current_obstacle_size
-        mirror_obstacle_id = self.add_obstacle_with_geofence((mirrored_x, y), cols_occupied, rows_occupied)
-        self.obstacles.append((obstacle_id, mirror_obstacle_id, new_cells))
+        # Calcular posición espejo
+        mid_x = self.ancho_terreno_pixels // 2
+        mirrored_x = mid_x + (mid_x - x) - self.cell_size
+        mirrored_col = int(mirrored_x // self.cell_size)
+        mirrored_cells = {(mirrored_col, row)}
+
+        # Verificar si las celdas espejo están ocupadas
+        if any(cell in self.occupied_cells for cell in mirrored_cells):
+            messagebox.showerror("Error", "No se puede colocar el obstáculo espejo sobre otro obstáculo.")
+            return
+
+        # Añadir espejo
+        mirror_obstacle = self.add_obstacle((mirrored_x, y), obstacle_id)
+
+        # Guardar obstáculos con celdas ocupadas
+        self.obstacles.append({
+            "id": obstacle_id,
+            "original": (obstacle, new_cells),
+            "mirror": (mirror_obstacle, mirrored_cells)
+        })
+        self.occupied_cells.update(new_cells | mirrored_cells)
+
+    def place_obstacle(self, x, y, mirrored):
+        col, row = int(x // self.cell_size), int(y // self.cell_size)
+        new_cells = {(col, row)}
+
+        if any(cell in self.occupied_cells for cell in new_cells):
+            return False
+
+        x, y = col * self.cell_size, row * self.cell_size
+        obstacle_id = self.generate_obstacle_id()
+        obstacle = self.add_obstacle((x, y), obstacle_id)
+        self.obstacles.append({"id": obstacle_id, "item": obstacle, "cells": new_cells, "mirrored": mirrored})
         self.occupied_cells.update(new_cells)
-        print(f"Occupied cells updated after adding: {self.occupied_cells}")
+        return True
 
-    def add_obstacle_with_geofence(self, coords, cols_occupied, rows_occupied):
-        """Añade un obstáculo en las coordenadas especificadas y dibuja su GeoFence adaptado a la forma."""
-        if self.obstacle_type in self.obstacle_images:
-            resized_icon = self.resize_image(self.obstacle_images[self.obstacle_type], self.current_obstacle_size)
-            obstacle = self.map_widget.create_image(coords[0], coords[1], image=resized_icon, anchor='nw',
-                                                    tags="obstacle")
-            self.resized_images[obstacle] = resized_icon
 
-            # Generar un geofence adaptado a la forma de la imagen del obstáculo, sin relleno
-            geofence_points = self.get_shape_contour_points(coords)
-            geofence = self.map_widget.create_polygon(geofence_points, outline="red", fill="", width=2,
-                                                      tags="geofence_obstacle")
-            self.geofenceElements.append(geofence)
-            return (obstacle, geofence)
-
-    def rotate_obstacle(self):
-        """Rota el obstáculo seleccionado 90 grados cada vez que se presiona el botón."""
-        if self.selected_obstacle:
-            # Incrementar el ángulo de rotación
-            current_angle = self.rotation_angles.get(self.selected_obstacle[0][0], 0)
-            new_angle = (current_angle + 90) % 360
-            self.rotation_angles[self.selected_obstacle[0][0]] = new_angle
-            self.rotation_angles[self.selected_obstacle[1][0]] = new_angle  # Para el espejo también
-
-            # Rotar la imagen del obstáculo seleccionado
-            for obs, geo in [self.selected_obstacle[0], self.selected_obstacle[1]]:
-                image = self.obstacle_images[self.obstacle_type]
-                rotated_image = image.rotate(new_angle, expand=True)
-                resized_icon = ImageTk.PhotoImage(rotated_image.resize((self.current_obstacle_size, self.current_obstacle_size)))
-                self.map_widget.itemconfig(obs, image=resized_icon)
-                self.resized_images[obs] = resized_icon
-
-                # Rotar el geofence también
-                coords = self.map_widget.coords(obs)
-                if coords:
-                    geofence_points = self.get_shape_contour_points((coords[0], coords[1]))
-                    rotated_points = self.rotate_points(geofence_points, new_angle, coords)
-                    self.map_widget.coords(geo, *sum(rotated_points, ()))
-
-    def rotate_points(self, points, angle, center):
-        """Rota una lista de puntos en torno a un centro dado."""
-        from math import cos, sin, radians
-        angle = radians(angle)
-        cx, cy = center
-        rotated_points = []
-        for x, y in points:
-            tx, ty = x - cx, y - cy
-            x_rot = tx * cos(angle) - ty * sin(angle) + cx
-            y_rot = tx * sin(angle) + ty * cos(angle) + cy
-            rotated_points.append((x_rot, y_rot))
-        return rotated_points
-
-    def get_shape_contour_points(self, coords):
-        """Obtiene los puntos del contorno de la forma del obstáculo en función de la geometría del tamaño."""
-        x, y = coords
-        size = self.current_obstacle_size
-
-        if self.obstacle_type == "cuadrado":
-            # Contorno de un cuadrado
-            return [(x, y), (x + size, y), (x + size, y + size), (x, y + size)]
-        elif self.obstacle_type == "Triangulo":
-            # Contorno de un triángulo equilátero
-            return [(x + size / 2, y), (x, y + size), (x + size, y + size)]
-        else:
-            return []
-
-    def resize_image(self, image, size):
-        resized_image = image.resize((size, size), Image.LANCZOS)
-        return ImageTk.PhotoImage(resized_image)
-
-    def increase_obstacle_size(self):
-        self.current_obstacle_size += 10
-        self.resize_obstacles()
-
-    def decrease_obstacle_size(self):
-        if self.current_obstacle_size > 10:
-            self.current_obstacle_size -= 10
-            self.resize_obstacles()
-
-    def resize_obstacles(self):
-        for obstacle_pair in self.obstacles:
-            obstacle = obstacle_pair[0]  # Solo consideramos el obstáculo en sí, no el reflejo.
-            if self.map_widget.coords(obstacle):  # Verificamos que el obstáculo aún existe en el mapa.
-                coords = self.map_widget.coords(obstacle)
-                if coords:  # Asegurarse de que se obtuvieron coordenadas válidas.
-                    resized_icon = self.resize_image(self.obstacle_images[self.obstacle_type],
-                                                     self.current_obstacle_size)
-                    self.map_widget.itemconfig(obstacle, image=resized_icon)
-                    self.resized_images[obstacle] = resized_icon
+    def add_obstacle(self, coords, obstacle_id):
+        resized_icon = ImageTk.PhotoImage(self.obstacle_images["cuadrado"].resize((self.cell_size, self.cell_size)))
+        obstacle = self.map_canvas.create_image(coords[0], coords[1], image=resized_icon, anchor='nw', tags="obstacle")
+        self.resized_images[obstacle] = resized_icon
+        return obstacle
 
     def select_obstacle(self, event):
-        """Selecciona el obstáculo al hacer clic en él."""
-        x = self.map_widget.canvasx(event.x)
-        y = self.map_widget.canvasy(event.y)
-
-        # Filtrar los elementos que están en la posición clicada
-        item = None
-        for obj in self.map_widget.find_overlapping(x, y, x, y):
-            if "obstacle" in self.map_widget.gettags(obj):
-                item = obj
-                break
+        x, y = self.map_canvas.canvasx(event.x), self.map_canvas.canvasy(event.y)
+        item = next((obj for obj in self.map_canvas.find_overlapping(x, y, x, y)
+                     if "obstacle" in self.map_canvas.gettags(obj)), None)
 
         if item:
-            obstacle_id = item
-            for obstacle_pair in self.obstacles:
-                if obstacle_pair[0][0] == obstacle_id or obstacle_pair[1][0] == obstacle_id:
-                    self.selected_obstacle = obstacle_pair
-                    break
-            if self.selected_obstacle:
-                # Marcar el obstáculo y su reflejo
-                self.map_widget.itemconfig(self.selected_obstacle[1][1], outline="blue", width=3)  # Geofence
-                messagebox.showinfo("Selección",
-                                    "Obstáculo seleccionado. Usa 'Borrar Obstáculo Seleccionado' para eliminarlo.")
-        else:
-            messagebox.showwarning("Advertencia", "No se encontró ningún obstáculo en esa ubicación.")
+            for obstacle in self.obstacles:
+                if obstacle["original"][0] == item or obstacle["mirror"][0] == item:
+                    self.selected_obstacle = obstacle
+                    print(f"Obstáculo seleccionado: ID {obstacle['id']} - "
+                          f"Celdas Originales: {obstacle['original'][1]} - "
+                          f"Celdas Espejo: {obstacle['mirror'][1]}")
+                    return
 
     def delete_selected_obstacle(self):
-        """Borra el obstáculo seleccionado y su reflejo, junto con sus geofences."""
         if self.selected_obstacle:
-            self.map_widget.delete(self.selected_obstacle[0][0])  # Obstáculo
-            self.map_widget.delete(self.selected_obstacle[0][1])  # Geofence
-            self.map_widget.delete(self.selected_obstacle[1][0])  # Obstáculo reflejado
-            self.map_widget.delete(self.selected_obstacle[1][1])  # Geofence reflejado
+            # Eliminar el obstáculo original
+            self.map_canvas.delete(self.selected_obstacle["original"][0])
+            self.occupied_cells.difference_update(self.selected_obstacle["original"][1])
 
-            # Eliminar las celdas ocupadas asociadas al obstáculo
-            cells_to_remove = self.selected_obstacle[2]
-            self.occupied_cells.difference_update(cells_to_remove)
+            # Eliminar el obstáculo espejo
+            self.map_canvas.delete(self.selected_obstacle["mirror"][0])
+            self.occupied_cells.difference_update(self.selected_obstacle["mirror"][1])
 
-            print(f"Cells to remove: {cells_to_remove}")
-            print(f"Occupied cells after deletion: {self.occupied_cells}")
-
-            # Actualizar la lista de obstáculos y reiniciar la selección
-            self.obstacles = [obs for obs in self.obstacles if obs != self.selected_obstacle]
+            # Eliminar el obstáculo de la lista
+            self.obstacles.remove(self.selected_obstacle)
             self.selected_obstacle = None
-
-            messagebox.showinfo("Eliminación", "Obstáculo y reflejo eliminados con éxito.")
+            print("Obstáculo y su espejo eliminados correctamente.")
         else:
             messagebox.showwarning("Advertencia", "No hay obstáculo seleccionado para eliminar.")
 
     def add_background(self):
         filename = filedialog.askopenfilename(title="Seleccionar imagen de fondo")
         if filename:
-            background_image = Image.open(filename).resize((self.ancho_terreno_pixels, self.largo_terreno_pixels),
-                                                           Image.LANCZOS)
+            background_image = Image.open(filename).resize((self.ancho_terreno_pixels, self.largo_terreno_pixels), Image.LANCZOS)
             self.background_image = ImageTk.PhotoImage(background_image)
+            if hasattr(self, 'background_label'):
+                self.map_canvas.delete(self.background_label)
+            self.background_label = self.map_canvas.create_image(0, 0, anchor="nw", image=self.background_image)
+            self.map_canvas.tag_lower(self.background_label)
 
-            if self.background_label:
-                self.map_widget.delete(self.background_label)
+    def save_map(self):
+        folder_path = "Drones/maps"
+        os.makedirs(folder_path, exist_ok=True)
 
-            self.background_label = self.map_widget.create_image(0, 0, anchor="nw", image=self.background_image)
-            self.map_widget.tag_lower(self.background_label)
+        file_name = filedialog.asksaveasfilename(
+            initialdir=folder_path,
+            title="Guardar Mapa",
+            defaultextension=".json",
+            filetypes=[("Archivos JSON", "*.json")]
+        )
+
+        if not file_name:
+            messagebox.showwarning("Cancelado", "El guardado del mapa fue cancelado.")
+            return
+
+        try:
+            obstacles = []
+            for obs in self.obstacles:
+                if "original" in obs and "mirror" in obs:
+                    obstacles.append({
+                        "id": obs["id"],
+                        "original": {"x": obs["original"]["coords"][0], "y": obs["original"]["coords"][1]},
+                        "mirror": {"x": obs["mirror"]["coords"][0], "y": obs["mirror"]["coords"][1]}
+                    })
+
+            geofence = []
+            for element in self.geofenceElements:
+                coords = self.map_canvas.coords(element)
+                if coords:
+                    geofence.append({"x": coords[0], "y": coords[1]})
+
+            map_data = {
+                "map_size": {
+                    "width": self.map_canvas.winfo_width(),
+                    "height": self.map_canvas.winfo_height()
+                },
+                "obstacles": obstacles,
+                "geofence": geofence
+            }
+
+            with open(file_name, "w") as file:
+                json.dump(map_data, file, indent=4)
+
+            messagebox.showinfo("Guardado", f"Mapa guardado correctamente como: {os.path.basename(file_name)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al guardar el mapa: {str(e)}")
+
+    def load_map(self):
+        folder_path = "Drones/maps"
+        file_path = filedialog.askopenfilename(
+            initialdir=folder_path,
+            title="Cargar Mapa",
+            filetypes=[("Archivos JSON", "*.json")]
+        )
+
+        if not file_path:
+            messagebox.showwarning("Cancelado", "La carga del mapa fue cancelada.")
+            return
+
+        try:
+            with open(file_path, "r") as file:
+                map_data = json.load(file)
+
+            # Limpiar canvas y variables
+            self.map_canvas.delete("all")
+            self.occupied_cells.clear()
+            self.obstacles.clear()
+            self.selected_obstacle = None
+
+            # Dibujar la cuadrícula y el geofence
+            self.draw_grid()
+            self.auto_create_geofence()
+
+            # Cargar el fondo
+            if map_data.get("background"):
+                self.add_background_from_path(map_data["background"])
+
+            # Cargar los obstáculos
+            for obs in map_data["obstacles"]:
+                original_x = obs["original"]["x"]
+                original_y = obs["original"]["y"]
+
+                # Reconstruir obstáculo original y espejo
+                self.load_obstacle(original_x, original_y)
+
+            messagebox.showinfo("Cargado", f"Mapa cargado correctamente desde: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al cargar el mapa: {str(e)}")
+
+    def load_obstacle(self, x, y):
+        # Añadir obstáculo original
+        col, row = int(x // self.cell_size), int(y // self.cell_size)
+        new_cells = {(col, row)}
+
+        # Calcular posición espejo
+        mid_x = self.ancho_terreno_pixels // 2
+        mirrored_x = mid_x + (mid_x - x) - self.cell_size
+        mirrored_col = int(mirrored_x // self.cell_size)
+        mirrored_cells = {(mirrored_col, row)}
+
+        # Añadir obstáculo y espejo al mapa
+        obstacle_id = self.generate_obstacle_id()
+        obstacle = self.add_obstacle((x, y), obstacle_id)
+        mirror_obstacle = self.add_obstacle((mirrored_x, y), obstacle_id)
+
+        # Actualizar variables
+        self.obstacles.append({
+            "id": obstacle_id,
+            "original": (obstacle, new_cells),
+            "mirror": (mirror_obstacle, mirrored_cells)
+        })
+        self.occupied_cells.update(new_cells | mirrored_cells)
+
+    def add_background_from_path(self, path):
+        try:
+            background_image = Image.open(path).resize((self.ancho_terreno_pixels, self.largo_terreno_pixels),
+                                                       Image.LANCZOS)
+            self.background_image = ImageTk.PhotoImage(background_image)
+            if hasattr(self, 'background_label'):
+                self.map_canvas.delete(self.background_label)
+            self.background_label = self.map_canvas.create_image(0, 0, anchor="nw", image=self.background_image)
+            self.map_canvas.tag_lower(self.background_label)
+            self.background_image_path = path
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el fondo: {str(e)}")
+
+
+    def buildFrame(self):
+        return self.fatherFrame
 
 
 if __name__ == "__main__":
     root = ctk.CTk()
+    root.geometry("1685x1009")
+    root.grid_rowconfigure(0, weight=1)
+    root.grid_columnconfigure(1, weight=1)
     editor = MapFrameClass(None, root)
-    editor.buildFrame()
     root.mainloop()
