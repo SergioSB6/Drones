@@ -8,6 +8,7 @@ import platform
 import subprocess
 import sys
 import shutil
+from Controles_Admin import ControlesAdmin
 
 
 def install_dependencies():
@@ -70,6 +71,7 @@ ventana = ctk.CTk()  # Crear la ventana
 ventana.geometry("1280x720")  # Tamaño de la ventana
 ventana.title("Ventana principal")
 
+
 # Configurar para que la ventana comience en pantalla completa
 ventana.attributes("-fullscreen", True)
 
@@ -81,6 +83,8 @@ ventana.bind("<Escape>", end_fullscreen)
 # Crear dos marcos (pantallas) que se alternarán
 frame_titulo = ctk.CTkFrame(master=ventana)  # Primer marco (titulo)
 frame_titulo.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
+
+
 
 frame_menu = ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
 frame_menu.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
@@ -167,8 +171,12 @@ def mostrar_menu():
 
 # Funciones para cada opción del menú
 def abrir_configuracion_avanzada():
+    global dron
     print("Abrir configuración avanzada")
-    os.system("python Controles_Admin.py")
+    ca=ControlesAdmin(dron)
+    ca.abrir_ventana()
+
+
 
 def ajustar_sonido():
     print("Ajustar sonido")
