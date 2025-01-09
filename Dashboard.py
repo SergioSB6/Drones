@@ -19,7 +19,7 @@ def install_dependencies():
         import PIL
     except ImportError:
         print("Instalando dependencias necesarias...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "customtkinter", "numpy", "pillow"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "customtkinter", "numpy", "pillow","  shapely"])
 
     # Instala la fuente personalizada
     install_custom_font()

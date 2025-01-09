@@ -2,8 +2,18 @@ import os
 import customtkinter as ctk
 from tkinter import filedialog, messagebox, Toplevel
 import json
+import time
 from PIL import Image, ImageTk
-from modules.map_processing import calculate_coordinates, get_geofence_polygons
+from PIL.features import modules
+from click import command
+
+from modules.dron_setGeofence import setGEOFence
+from modules.map_processing import calculate_coordinates
+from modules.dron_local_telemetry import send_local_telemetry_info
+import math
+from modules.dron_nav import go, changeHeading
+from modules.dron_mission import executeMission
+
 
 class CheckpointScreen:
     def __init__(self, dron, parent_frame):
@@ -11,7 +21,9 @@ class CheckpointScreen:
         self.dron = dron
         self.map_data = None
         self.connected_drones = []  # Lista de drones conectados
+        self.player_positions = {}
         self.frame = parent_frame  # Contenedor principal
+        self.reset_player_positions()
 
         # Título
         label_title = ctk.CTkLabel(master=self.frame, text="CHECKPOINT RACE MODE", font=("M04_FATAL FURY", 50))
@@ -68,23 +80,47 @@ class CheckpointScreen:
             messagebox.showerror("Error", f"No se pudo cargar el mapa: {e}")
 
     def connect_player(self):
-            global dron
-            connection_string = "tcp:127.0.0.1:5762"
-            baud = 115200
-            try:
-                print(f"Intentando conectar a {connection_string} con baud {baud}...")
+        connection_string = "tcp:127.0.0.1:5762"
+        baud = 115200
+        try:
+            print(f"Intentando conectar a {connection_string} con baud {baud}...")
 
-                if self.dron.connect(connection_string, baud):
-                    print("Conexión exitosa al dron.")
-                    self.connected_drones.append(self.dron)
-                    self.update_player_list()
-                    dron= self.dron
-                    messagebox.showinfo("Conexión Exitosa", "Jugador conectado correctamente.")
-                else:
-                    messagebox.showerror("Error", "No se pudo conectar al dron.")
-            except Exception as e:
-                print(f"Error inesperado: {e}")
-                messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+            if self.dron.connect(connection_string, baud):
+                print("Conexión exitosa al dron.")
+                self.connected_drones.append(self.dron)
+
+                # Inicia la telemetría después de conectar
+                self.dron.send_telemetry_info(self.process_telemetry_info)
+
+                self.update_player_list()
+                messagebox.showinfo("Conexión Exitosa", "Jugador conectado correctamente.")
+            else:
+                messagebox.showerror("Error", "No se pudo conectar al dron.")
+        except Exception as e:
+            print(f"Error inesperado: {e}")
+            messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+
+    def process_telemetry_info(self, telemetry_info):
+        """
+        Procesa la información de telemetría recibida.
+        """
+        print(f"Telemetría recibida: {telemetry_info}")
+
+        # Actualizar latitud y longitud iniciales
+        if telemetry_info['lat'] != 0.0 and telemetry_info['lon'] != 0.0:
+            self.initial_lat = telemetry_info['lat']
+            self.initial_lon = telemetry_info['lon']
+            print(f"Coordenadas iniciales asignadas: lat={self.initial_lat}, lon={self.initial_lon}")
+        else:
+            print("Las coordenadas recibidas no son válidas.")
+
+    def reset_player_positions(self):
+        """
+        Reinicia las posiciones iniciales de los jugadores.
+        """
+        self.player_positions = {}  # Reiniciar las posiciones
+
+
 
     def update_player_list(self):
         self.player_listbox.delete("1.0", "end")
@@ -161,77 +197,15 @@ class CheckpointScreen:
             else:
                 self.map_canvas.create_rectangle(mx, my, mx + scale, my + scale, fill="yellow", outline="yellow")
 
-    def start_telemetry_update(self):
-        """
-        Inicia una actualización periódica para mostrar la telemetría del dron.
-        """
-        if not self.dron.is_connected:
-            messagebox.showwarning("Advertencia", "El dron no está conectado.")
-            return
-
-        def update_telemetry():
-            telemetry = self.dron.get_local_telemetry()
-            if telemetry:
-                position = f"Posición: Lat {telemetry['lat']}, Lon {telemetry['lon']}, Alt {telemetry['alt']}"
-                velocity = f"Velocidad: {telemetry['vel']} m/s"
-                mode = f"Modo: {telemetry['mode']}"
-                self.telemetry_label.configure(text=f"{position}\n{velocity}\n{mode}")
-            self.frame.after(1000, update_telemetry)
-
-        update_telemetry()
-
-        # Añade esta etiqueta a tu interfaz
-        self.telemetry_label = ctk.CTkLabel(self.frame, text="Telemetría: No disponible", font=("Arial", 12))
-        self.telemetry_label.place(relx=0.05, rely=0.1, anchor="nw")
-
-    def link_controls_to_map(self, control_window):
-        """
-        Vincula los controles de administración con el mapa.
-        """
-
-        def move_dron_on_map(direction):
-            # Movemos el dron físicamente
-            self.dron.go(direction)
-
-            # Obtenemos la posición actualizada
-            telemetry = self.dron.get_local_telemetry()
-            if telemetry:
-                lat, lon = telemetry["lat"], telemetry["lon"]
-
-                # Convertimos la posición geográfica a coordenadas del canvas
-                cell = self.get_canvas_coordinates_from_gps(lat, lon)
-                if cell:
-                    x, y = cell
-                    self.game_canvas.coords("player_drone_1", x, y)
-
-        # Vinculamos los botones de navegación
-        for direction in ["NorthWest", "North", "NorthEast", "West", "Stop", "East", "SouthWest", "South", "SouthEast"]:
-            control_window.link_button_to_direction(direction, move_dron_on_map)
-
-    def get_canvas_coordinates_from_gps(self, lat, lon):
-        """
-        Convierte coordenadas GPS a coordenadas del canvas.
-        """
-        if not self.map_data or not self.map_data.get("cell_coordinates"):
-            return None
-
-        for idx, cell in enumerate(self.map_data["cell_coordinates"]):
-            if abs(cell["lat"] - lat) < 0.0001 and abs(cell["lon"] - lon) < 0.0001:
-                row = idx // self.map_data["map_size"]["width"]
-                col = idx % self.map_data["map_size"]["width"]
-                x = col * self.map_data["map_size"]["cell_size"]
-                y = row * self.map_data["map_size"]["cell_size"]
-                return x, y
-        return None
 
     def start_game(self):
         if not self.map_data:
             messagebox.showwarning("Advertencia", "Selecciona un mapa antes de jugar.")
             return
 
-        if not self.connected_drones:
-            messagebox.showwarning("Advertencia", "Conecta al menos un jugador antes de iniciar el juego.")
-            return
+        #if not self.connected_drones:
+         #   messagebox.showwarning("Advertencia", "Conecta al menos un jugador antes de iniciar el juego.")
+          #  return
 
         # Crear ventana emergente para mostrar el mapa completo
         game_window = Toplevel()
@@ -265,6 +239,7 @@ class CheckpointScreen:
             x2 = x1 + cell_size
             y2 = y1 + cell_size
             game_canvas.create_rectangle(x1, y1, x2, y2, fill="red", outline="red", tag="geofence")
+            print(f"Dibujando celda de geofence: col={col}, row={row}, x1={x1}, y1={y1}")
 
         # Dibujar obstáculos (original y espejo)
         obstacle_image_path = self.map_data.get("obstacle_image")
@@ -297,46 +272,102 @@ class CheckpointScreen:
                 my2 = my1 + cell_size
                 game_canvas.create_rectangle(mx1, my1, mx2, my2, fill="yellow", outline="black", tag="obstacle")
 
-        # Dibujar drones para jugadores conectados
         try:
             drone_image_path = "assets/dron.png"
-            drone_image = Image.open(drone_image_path).resize((cell_size, cell_size), Image.LANCZOS)
+            if not os.path.exists(drone_image_path):
+                raise FileNotFoundError(f"No se encontró la imagen del dron en {drone_image_path}")
+
+            drone_image = Image.open(drone_image_path).resize((30, 30), Image.LANCZOS)
             self.drone_image_full = ImageTk.PhotoImage(drone_image)
 
-            # Tamaño del mapa en celdas
-            map_width_cells = self.map_data["map_size"]["width"] // self.map_data["map_size"]["cell_size"]
-            map_height_cells = self.map_data["map_size"]["height"] // self.map_data["map_size"]["cell_size"]
-
-            # Obtener celdas fuera del geofence
-            geofence_cells = {(cell["row"], cell["col"]) for cell in self.map_data["geofence"]}
-            positions = []
-
-            # Jugador 1: Columna central en la mitad izquierda
-            left_center_col = map_width_cells // 4
-            for row in reversed(range(map_height_cells)):
-                if (row, left_center_col) not in geofence_cells:
-                    positions.append((left_center_col * cell_size, row * cell_size))
-                    break
-
-            # Jugador 2: Columna central en la mitad derecha
-            right_center_col = (map_width_cells // 4) * 3
-            for row in reversed(range(map_height_cells)):
-                if (row, right_center_col) not in geofence_cells:
-                    positions.append((right_center_col * cell_size, row * cell_size))
-                    break
-
-            # Posicionar drones en las celdas calculadas
             for idx, dron in enumerate(self.connected_drones):
-                if idx < len(positions):
-                    x, y = positions[idx]
+                # Obtener las coordenadas actuales del dron
+                lat, lon = dron.lat, dron.lon
+                if lat == 0.0 and lon == 0.0:
+                    print(f"Dron {idx + 1} no tiene coordenadas GPS válidas.")
+                    continue
+
+                # Convertir las coordenadas GPS a coordenadas del canvas
+                x, y = self.get_canvas_coordinates_from_gps(lat, lon)
+                if x is not None and y is not None:
+                    print(f"Dibujando dron {idx + 1} en posición inicial: x={x}, y={y}")
                     game_canvas.create_image(x, y, anchor="nw", image=self.drone_image_full,
                                              tag=f"player_drone_{idx + 1}")
-
+                else:
+                    print(f"Error al calcular las coordenadas del canvas para el dron {idx + 1}.")
         except Exception as e:
-            print(f"Error cargando la imagen del dron: {e}")
-
+            print(f"Error al dibujar el dron: {e}")
 
         messagebox.showinfo("Juego Iniciado", "¡Comenzando la carrera con los jugadores conectados!")
+
+        self.start_telemetry_sync(game_canvas)
+
+    def get_canvas_coordinates_from_gps(self, lat, lon):
+        """
+        Convierte coordenadas GPS (lat, lon) en coordenadas del canvas del juego.
+        """
+        try:
+            if not self.map_data:
+                print("Mapa no cargado.")
+                return None, None
+
+            cell_size = self.map_data["map_size"]["cell_size"]
+            map_width = self.map_data["map_size"]["width"]
+            map_height = self.map_data["map_size"]["height"]
+
+            delta_lat = self.initial_lat - lat
+            delta_lon = lon - self.initial_lon
+
+            col = delta_lon * (111320 * math.cos(math.radians(self.initial_lat))) / cell_size
+            row = delta_lat * 111320 / cell_size
+
+            x = col * cell_size
+            y = row * cell_size
+
+            if 0 <= x <= map_width and 0 <= y <= map_height:
+                return x, y
+            else:
+                print("Coordenadas fuera de los límites del mapa.")
+                return None, None
+        except Exception as e:
+            print(f"Error en get_canvas_coordinates_from_gps: {e}")
+            return None, None
+
+    def start_telemetry_sync(self, canvas):
+        """
+        Sincroniza las coordenadas del dron en el canvas con base en la telemetría recibida.
+        """
+
+        def update():
+            while True:
+                try:
+                    # Obtener las coordenadas GPS del dron
+                    lat = self.dron.lat
+                    lon = self.dron.lon
+
+                    if lat == 0.0 and lon == 0.0:
+                        print("Dron 1 no tiene coordenadas GPS válidas.")
+                        continue
+
+                    # Convertir coordenadas GPS a coordenadas del canvas
+                    x, y = self.get_canvas_coordinates_from_gps(lat, lon)
+
+                    if x is not None and y is not None:
+                        tag = "player_drone"
+                        canvas.delete(tag)  # Elimina la posición anterior
+                        canvas.create_oval(
+                            x - 5, y - 5, x + 5, y + 5, fill="blue", outline="white", tag=tag
+                        )
+                        print(f"Dron actualizado en canvas: x={x}, y={y}")
+                    else:
+                        print("Error: Coordenadas del canvas no válidas.")
+                except Exception as e:
+                    print(f"Error en la sincronización de telemetría: {e}")
+                time.sleep(0.1)  # Frecuencia de actualización
+
+        # Iniciar un hilo independiente para la actualización
+        import threading
+        threading.Thread(target=update, daemon=True).start()
 
     def callback_volver(self):
         # Función para volver al menú principal

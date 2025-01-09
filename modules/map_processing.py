@@ -3,8 +3,8 @@ import json
 from pymavlink import mavutil
 from shapely.geometry import Polygon
 
-GEO_ORIGIN_LAT = 41.276619
-GEO_ORIGIN_LON = 1.989019
+GEO_ORIGIN_LAT = 41.2763696
+GEO_ORIGIN_LON = 1.9884235
 
 def calculate_coordinates(map_data):
     """
@@ -24,6 +24,7 @@ def calculate_coordinates(map_data):
         for col in range(map_width_cells):
             lat = GEO_ORIGIN_LAT - (row * cell_size / METERS_PER_DEGREE_LAT)
             lon = GEO_ORIGIN_LON + (col * cell_size / METERS_PER_DEGREE_LON)
+
             map_data["cell_coordinates"].append({"lat": lat, "lon": lon})
 
     return map_data
@@ -109,3 +110,4 @@ def get_geofence_polygons(map_data):
     ]
 
     return polygons
+

@@ -23,7 +23,8 @@ class MapFrameClass:
         self.cell_size = 0
         self.calculate_cell_size()
         self.current_obstacle_size = self.cell_size
-
+        self.top_left_lat = 41.276619  # Latitud
+        self.top_left_lon = 1.989019  # Longitud
         self.ancho_terreno_pixels = int(self.ancho_terreno_metros * self.cell_size)
         self.largo_terreno_pixels = int(self.largo_terreno_metros * self.cell_size)
 
@@ -228,6 +229,10 @@ class MapFrameClass:
                     "width": self.ancho_terreno_pixels,
                     "height": self.largo_terreno_pixels,
                     "cell_size": self.cell_size
+                },
+                "top_left": {  # Coordenadas GPS de la esquina superior izquierda
+                    "lat": self.top_left_lat,  # Debes definir `self.top_left_lat` en tu programa
+                    "lon": self.top_left_lon  # Debes definir `self.top_left_lon` en tu programa
                 },
                 "background": getattr(self, "background_image_path", None),  # Ruta del fondo si existe
                 "obstacles": obstacles,  # Lista de obstáculos

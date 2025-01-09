@@ -2,6 +2,7 @@ import time
 import customtkinter as ctk
 from Dron import Dron
 from tkinter import messagebox
+from modules import dron_nav
 
 class ControlesAdmin:
     def __init__(self, dron):
@@ -18,12 +19,15 @@ class ControlesAdmin:
             # altura de despegue prefijada
             alt = 8
             # llamo en modo no bloqueante y le indico qué función debe activar al acabar la operación, y qué parámetro debe usar
-            dron.takeOff(alt, blocking=False, callback=self.informar, params='VOLANDO')
+            self.dron.takeOff(alt, blocking=True, callback=self.informar, params='VOLANDO')
             # mientras despego pongo el boton en amarillo
             takeOffBtn.configure(fg_color='yellow', text='Despegando....')
+
+
         except:
             # en el cuadro de texto no hay ningún numero
             messagebox.showerror("error", "Introduce la altura para el despegue")
+
 
 
     # esta es la función que se activará cuando acaben las funciones no bloqueantes (despegue y RTL)
@@ -48,10 +52,10 @@ class ControlesAdmin:
     def RTL(self):
         global dron, RTLBtn
         # si esta navegando detengo el modo de navegación
-        if dron.going:
-            dron.stopGo()
+        if self.dron.going:
+            self.dron.stopGo()
         # llamo en modo no bloqueante y le indico qué función debe activar al acabar la operación, y qué parámetro debe usar
-        dron.RTL(blocking=False, callback=self.informar, params='EN CASA')
+        self.dron.RTL(blocking=False, callback=self.informar, params='EN CASA')
         # mientras retorno pongo el boton en amarillo
         RTLBtn.configure(fg_color='yellow', text='Retornando....')
 
@@ -64,12 +68,12 @@ class ControlesAdmin:
 
 
     # función para dirigir el dron en una dirección
-    def go(direction):
+    def go(self, direction):
         global dron
         # si empezamos a navegar, le indico al dron
-        if not dron.going:
-            dron.startGo()
-        dron.go(direction)
+        if not self.dron.going:
+            self.dron.startGo()
+        self.dron.go(direction)
 
 
     # ================= DASHBOARD INICIAL =================
@@ -106,7 +110,7 @@ class ControlesAdmin:
         takeOffBtn = ctk.CTkButton(controlFrame, text="Despegar", fg_color="dark orange", command=self.takeoff)
         takeOffBtn.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
 
-        RTLBtn = ctk.CTkButton(controlFrame, text="RTL", fg_color="dark orange", command=self.RTL)
+        RTLBtn = ctk.CTkButton(controlFrame, text="RTL", fg_color="dark orange", command= self.RTL)
         RTLBtn.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
         # ================= FRAME/BOTONES NAVEGACIÓN =================
@@ -132,7 +136,7 @@ class ControlesAdmin:
         NWBtn = ctk.CTkButton(navFrame, text="NW", fg_color="dark orange", command=lambda: self.go("NorthWest"))
         NWBtn.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
 
-        NoBtn = ctk.CTkButton(navFrame, text="No", fg_color="dark orange", command=lambda: self.go("North"))
+        NoBtn = ctk.CTkButton(navFrame, text="No", fg_color="dark orange", command=lambda: self.dron.go("North"))
         NoBtn.grid(row=0, column=1, padx=2, pady=2, sticky="nsew")
 
         NEBtn = ctk.CTkButton(navFrame, text="NE", fg_color="dark orange", command=lambda: self.go("NorthEast"))
