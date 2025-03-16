@@ -56,8 +56,8 @@ def _setGEOFence(self, polygons):
                     self.vehicle.target_component,
                     idx,
                     fence_total,
-                    float(point["lat"]),
-                    float(point["lon"]),
+                    float(point[0]),
+                    float(point[1]),
                 )
             )
         print("Geofence aplicado correctamente con", fence_total, "puntos.")

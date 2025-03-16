@@ -14,7 +14,11 @@ class ControlesAdmin:
         """
         global dron, armBtn
         # Llamada no bloqueante, con callback e identificador de mensaje 'ARMED'
-        self.dron.arm(blocking=False, callback=self.informar, params='ARMED')
+        try:
+            self.dron.arm(blocking=False, callback=self.informar, params='ARMED')
+        except:
+            self.dron.state=="connected"
+            armBtn.configure(fg_color='dark orange', text='Armar')
         # Mientras se arma, ponemos el botón en amarillo
         armBtn.configure(fg_color='yellow', text='Armando...')
 

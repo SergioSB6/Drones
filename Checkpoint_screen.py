@@ -92,8 +92,40 @@ class CheckpointScreen:
             messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
 
     # ----------------------------------------------------------------------
-    # 3) Iniciar juego (mostrar mapa grande)
+    #def apply_geofence(self):
+
+
     # ----------------------------------------------------------------------
+    def get_gps_from_canvas_coordinates(self, x, y):
+            """
+            Converts canvas coordinates (x, y) back to GPS coordinates (lat, lon).
+            Uses 'top_left' as a reference and 'cell_size' as px/m.
+            """
+            x_old = x
+            y_old = y
+            angulo = math.radians(72)
+            x = x_old * math.cos(angulo) - y_old * math.sin(angulo)
+            y = x_old * math.sin(angulo) + y_old * math.cos(angulo)
+
+            if not self.map_data or "top_left" not in self.map_data:
+                print("🚨 Mapa sin 'top_left'.")
+                return None, None
+
+            top_left_lat = self.map_data["top_left"]["lat"]
+            top_left_lon = self.map_data["top_left"]["lon"]
+            scale = self.map_data["map_size"]["cell_size"]
+
+            # Convert back from pixels to meters
+            delta_lon_m = x / scale
+            delta_lat_m = y / scale
+
+            # Convert back from meters to degrees
+            lat = top_left_lat - (delta_lat_m / 111320.0)
+            lon = top_left_lon + (delta_lon_m / (111320.0 * math.cos(math.radians(top_left_lat))))
+
+            print(f"📌 Canvas → GPS: x={x:.2f}, y={y:.2f} → lat={lat:.6f}, lon={lon:.6f}")
+            return lat, lon
+
     def start_game(self):
         if not self.map_data:
             messagebox.showwarning("Advertencia", "Selecciona un mapa antes de jugar.")
@@ -128,7 +160,15 @@ class CheckpointScreen:
             x2 = x1 + cell_size
             y2 = y1 + cell_size
             game_canvas.create_rectangle(x1, y1, x2, y2, fill="red", outline="red", tag="geofence")
-
+        lista_geo=[[[14,14],[14,952],[146,952],[196,14]]]
+        #[[238,14],[420,14],[238,952],[420,952]]
+        lista_listas_dic = []
+        for poligono in lista_geo:
+            for coordenada in poligono:
+                lata, longanisa = self.get_gps_from_canvas_coordinates(coordenada[0],coordenada[1])
+                coordenada[0] = lata
+                coordenada[1] = longanisa
+        self.dron.setGEOFence(lista_geo)
         # Dibujar obstáculos
         obstacle_image_path = self.map_data.get("obstacle_image")
         obstacle_image = None
@@ -172,6 +212,8 @@ class CheckpointScreen:
 
         messagebox.showinfo("Juego Iniciado", "¡Comenzando la carrera con los jugadores conectados!")
         self.start_telemetry_sync(game_canvas)
+        print(self.get_gps_from_canvas_coordinates(0,0))
+
 
     # ----------------------------------------------------------------------
     # 4) Telemetría y coordenadas
@@ -229,6 +271,11 @@ class CheckpointScreen:
                         # Clamping opcional
                         map_width = self.map_data["map_size"]["width"]
                         map_height = self.map_data["map_size"]["height"]
+                        x_old=x
+                        y_old=y
+                        angulo=math.radians(-72)
+                        x = x_old * math.cos(angulo) - y_old * math.sin(angulo)
+                        y = x_old * math.sin(angulo) + y_old * math.cos(angulo)
                         x = max(0, min(map_width - 30, x))
                         y = max(0, min(map_height - 30, y))
 

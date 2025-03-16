@@ -20,13 +20,13 @@ class MapFrameClass:
         self.obstacle_images = {}
 
         self.ancho_terreno_metros = 32.00
-        self.largo_terreno_metros = 74.00
+        self.largo_terreno_metros = 70.00
         self.cell_size = 0
         self.calculate_cell_size()
         self.current_obstacle_size = self.cell_size
         # Referencia geográfica: esquina superior izquierda del terreno real
-        self.top_left_lat = 41.276775
-        self.top_left_lon = 1.988208
+        self.top_left_lat = 41.276603
+        self.top_left_lon = 1.989016
         self.ancho_terreno_pixels = int(self.ancho_terreno_metros * self.cell_size)
         self.largo_terreno_pixels = int(self.largo_terreno_metros * self.cell_size)
 
@@ -36,8 +36,8 @@ class MapFrameClass:
         self.create_geofence_cells()
 
     def calculate_cell_size(self):
-        max_width = 1685
-        max_height = 1009
+        max_width = 448
+        max_height = 980
         cell_width = max_width / self.ancho_terreno_metros
         cell_height = max_height / self.largo_terreno_metros
         self.cell_size = int(min(cell_width, cell_height))
