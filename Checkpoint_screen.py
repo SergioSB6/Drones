@@ -126,6 +126,7 @@ class CheckpointScreen:
             print(f"📌 Canvas → GPS: x={x:.2f}, y={y:.2f} → lat={lat:.6f}, lon={lon:.6f}")
             return lat, lon
 
+
     def start_game(self):
         if not self.map_data:
             messagebox.showwarning("Advertencia", "Selecciona un mapa antes de jugar.")
@@ -160,15 +161,17 @@ class CheckpointScreen:
             x2 = x1 + cell_size
             y2 = y1 + cell_size
             game_canvas.create_rectangle(x1, y1, x2, y2, fill="red", outline="red", tag="geofence")
-        lista_geo=[[[14,14],[14,952],[146,952],[196,14]]]
-        #[[238,14],[420,14],[238,952],[420,952]]
-        lista_listas_dic = []
+
+        lista_geo = [[[0,0], [0, 0], [0, 966], [210, 966], [210, 0]], [[224,0],[224,966],[434,966],[434,0]]]
+
         for poligono in lista_geo:
             for coordenada in poligono:
                 lata, longanisa = self.get_gps_from_canvas_coordinates(coordenada[0],coordenada[1])
                 coordenada[0] = lata
                 coordenada[1] = longanisa
         self.dron.setGEOFence(lista_geo)
+        print(lista_geo)
+
         # Dibujar obstáculos
         obstacle_image_path = self.map_data.get("obstacle_image")
         obstacle_image = None

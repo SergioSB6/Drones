@@ -25,8 +25,8 @@ class MapFrameClass:
         self.calculate_cell_size()
         self.current_obstacle_size = self.cell_size
         # Referencia geográfica: esquina superior izquierda del terreno real
-        self.top_left_lat = 41.276603
-        self.top_left_lon = 1.989016
+        self.top_left_lat = 41.2766126
+        self.top_left_lon = 1.9890216
         self.ancho_terreno_pixels = int(self.ancho_terreno_metros * self.cell_size)
         self.largo_terreno_pixels = int(self.largo_terreno_metros * self.cell_size)
 

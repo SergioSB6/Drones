@@ -28,7 +28,7 @@ class ControlesAdmin:
         """
         global dron, takeOffBtn
         try:
-            alt = 8
+            alt = 5
             # Llamada no bloqueante, con callback e identificador 'VOLANDO'
             self.dron.takeOff(alt, blocking=False, callback=self.informar, params='VOLANDO')
             # Mientras despega, el botón en amarillo
@@ -76,7 +76,7 @@ class ControlesAdmin:
     # ====== NAVIGATION FUNCTIONS ======
     def change_speed(speed):
         global dron
-        dron.changeNavSpeed(float(speed))
+        dron.changeNavSpeed(float(1))
 
     def go(self, direction):
         global dron

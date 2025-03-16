@@ -26,6 +26,13 @@ def _setGEOFence(self, polygons):
             float(4),  # Acción: Mantener dentro (verifica según tu firmware)
             mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
         )
+        self.vehicle.mav.param_set_send(
+            self.vehicle.target_system,
+            self.vehicle.target_component,
+            b"FENCE_TYPE",
+            float(7),  # 7 = Inclusion
+            mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
+        )
 
         # Unificar todos los polígonos en una lista de puntos (cerrando cada polígono)
         all_points = []

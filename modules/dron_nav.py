@@ -106,7 +106,7 @@ def changeHeading (self, absoluteDegrees):
 
 
 def changeNavSpeed (self, speed):
-    self.navSpeed = speed
+    self.navSpeed = 1
    #self.go(self.direction)
 
 
