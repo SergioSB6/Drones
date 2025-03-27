@@ -57,11 +57,11 @@ class ControlesAdmin:
         if mensaje == "EN CASA":
             # El dron ha terminado de hacer RTL
             RTLBtn.configure(fg_color='green', text='En casa')
-            dron.disconnect()
             # Devolver botones a la situación inicial
             armBtn.configure(fg_color='dark orange', text='Armar')
             takeOffBtn.configure(fg_color='dark orange', text='Despegar')
             RTLBtn.configure(fg_color='dark orange', text='RTL')
+            dron.disconnect()
 
     def RTL(self):
         """

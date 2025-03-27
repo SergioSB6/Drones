@@ -4,6 +4,10 @@ from tkinter import filedialog, messagebox, Toplevel
 import json
 import math
 from PIL import Image, ImageTk
+import time
+from playsound import playsound
+import threading
+import winsound
 
 # Módulos de dron
 from modules.dron_setGeofence import setGEOFence
@@ -90,11 +94,6 @@ class CheckpointScreen:
         except Exception as e:
             print(f"❌ Error en connect_player: {e}")
             messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
-
-    # ----------------------------------------------------------------------
-    #def apply_geofence(self):
-
-
     # ----------------------------------------------------------------------
     def get_gps_from_canvas_coordinates(self, x, y):
             """
@@ -126,6 +125,23 @@ class CheckpointScreen:
             print(f"📌 Canvas → GPS: x={x:.2f}, y={y:.2f} → lat={lat:.6f}, lon={lon:.6f}")
             return lat, lon
 
+    def check_if_on_obstacle_cell(self, x, y):
+        cell_size = self.map_data["map_size"]["cell_size"]
+        col = int(x / cell_size)
+        row = int(y / cell_size)
+        print("Dron en celda:", (col, row))
+
+        obstacle_cells = set()
+        for obs in self.map_data.get("obstacles", []):
+            obstacle_cells.add((obs["original"]["col"], obs["original"]["row"]))
+            obstacle_cells.add((obs["mirror"]["col"], obs["mirror"]["row"]))
+        print("Celdas de obstáculo:", obstacle_cells)
+
+        if (col, row) in obstacle_cells:
+            print("¡Alerta! Dron sobre obstáculo en celda", (col, row))
+            winsound.PlaySound("assets/alert.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+            return True
+        return False
 
     def start_game(self):
         if not self.map_data:
@@ -254,6 +270,8 @@ class CheckpointScreen:
             print(f"❌ Error en get_canvas_coordinates_from_gps: {e}")
             return None, None
 
+
+
     def start_telemetry_sync(self, canvas):
         """
         Dibuja el dron cada 100ms según la lat/lon real.
@@ -270,7 +288,6 @@ class CheckpointScreen:
                     if x is not None and y is not None and self.drone_image_full:
                         tag = "player_drone"
                         canvas.delete(tag)
-
                         # Clamping opcional
                         map_width = self.map_data["map_size"]["width"]
                         map_height = self.map_data["map_size"]["height"]
@@ -281,7 +298,8 @@ class CheckpointScreen:
                         y = x_old * math.sin(angulo) + y_old * math.cos(angulo)
                         x = max(0, min(map_width - 30, x))
                         y = max(0, min(map_height - 30, y))
-
+                        if self.check_if_on_obstacle_cell(x, y):
+                            print("Alerta: Dron sobre obstáculo.")
                         canvas.create_image(x, y, anchor="nw", image=self.drone_image_full, tag=tag)
                         print(f"✅ Dron en canvas: x={x:.1f}, y={y:.1f}")
                     else:

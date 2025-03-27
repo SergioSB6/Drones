@@ -8,8 +8,69 @@
         "lat": 41.2766126,
         "lon": 1.9890216
     },
-    "background": null,
-    "obstacles": [],
+    "background": "C:\\Users\\Sergio S\u00e1nchez\\Desktop\\TFG_Drones\\Drones\\Background\\hierba.png",
+    "obstacles": [
+        {
+            "id": 1,
+            "original": {
+                "col": 4,
+                "row": 7
+            },
+            "mirror": {
+                "col": 27,
+                "row": 7
+            },
+            "size": 14
+        },
+        {
+            "id": 2,
+            "original": {
+                "col": 5,
+                "row": 7
+            },
+            "mirror": {
+                "col": 26,
+                "row": 7
+            },
+            "size": 14
+        },
+        {
+            "id": 3,
+            "original": {
+                "col": 6,
+                "row": 7
+            },
+            "mirror": {
+                "col": 25,
+                "row": 7
+            },
+            "size": 14
+        },
+        {
+            "id": 4,
+            "original": {
+                "col": 7,
+                "row": 7
+            },
+            "mirror": {
+                "col": 24,
+                "row": 7
+            },
+            "size": 14
+        },
+        {
+            "id": 5,
+            "original": {
+                "col": 8,
+                "row": 7
+            },
+            "mirror": {
+                "col": 23,
+                "row": 7
+            },
+            "size": 14
+        }
+    ],
     "obstacle_image": "assets/square.png",
     "geofence": [
         {
@@ -1357,5 +1418,46 @@
             "row": 12
         }
     ],
-    "occupied_cells": []
+    "occupied_cells": [
+        {
+            "col": 23,
+            "row": 7
+        },
+        {
+            "col": 7,
+            "row": 7
+        },
+        {
+            "col": 24,
+            "row": 7
+        },
+        {
+            "col": 8,
+            "row": 7
+        },
+        {
+            "col": 26,
+            "row": 7
+        },
+        {
+            "col": 5,
+            "row": 7
+        },
+        {
+            "col": 27,
+            "row": 7
+        },
+        {
+            "col": 6,
+            "row": 7
+        },
+        {
+            "col": 25,
+            "row": 7
+        },
+        {
+            "col": 4,
+            "row": 7
+        }
+    ]
 }
