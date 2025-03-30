@@ -4,6 +4,7 @@ from tkinter import filedialog, messagebox, Toplevel
 import json
 import math
 from PIL import Image, ImageTk
+from Dron import Dron
 import time
 from playsound import playsound
 import threading
@@ -18,12 +19,12 @@ from modules.dron_mission import executeMission
 class CheckpointScreen:
     def __init__(self, dron, parent_frame):
         self.dron = dron
+        self.second_dron = Dron()
         self.map_data = None
         self.connected_drones = []
         self.player_positions = {}
         self.frame = parent_frame
-        self.is_on_obstacle=False
-        # SIN offset artificial
+        self.is_on_obstacle = False
         self.drone_image_full = None
 
         # Título
@@ -76,9 +77,10 @@ class CheckpointScreen:
     # 2) Conectar Jugador (Dron) y activar telemetría
     # ----------------------------------------------------------------------
     def connect_player(self):
-        connection_string = "tcp:127.0.0.1:5762"
+
         baud = 115200
         try:
+            connection_string = "tcp:127.0.0.1:5762"
             print(f"🔌 Intentando conectar a {connection_string} con baud {baud}...")
             self.dron.connect(connection_string, baud, blocking=True)
             if self.dron.state == "connected":
@@ -94,6 +96,20 @@ class CheckpointScreen:
         except Exception as e:
             print(f"❌ Error en connect_player: {e}")
             messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+            # Conexión del segundo dron (jugador 2)
+        try:
+            connection_string2 = "tcp:127.0.0.1:5772"
+            print(f"Conectando jugador 2 a {connection_string2}...")
+            self.second_dron.connect(connection_string2, baud, blocking=True)
+            if self.second_dron.state == "connected":
+                print("✅✅Jugador 2 conectado.")
+                self.connected_drones.append(self.second_dron)
+                # Se puede usar un callback distinto si querés diferenciarlos
+                self.second_dron.send_telemetry_info(self.process_telemetry_info_second)
+            else:
+                messagebox.showerror("Error", "El dron del jugador 2 no está en estado 'connected'.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error conectando jugador 2: {e}")
     # ----------------------------------------------------------------------
     def get_gps_from_canvas_coordinates(self, x, y):
             """
@@ -147,6 +163,28 @@ class CheckpointScreen:
         self.is_on_obstacle=False
         return False
 
+    def check_if_on_obstacle_cell_2(self, x, y):
+        cell_size = self.map_data["map_size"]["cell_size"]
+        col = int(x / cell_size) + 1
+        row = int(y / cell_size) + 1
+        print("Dron 2 en celda:", (col, row))
+
+        obstacle_cells = set()
+        for obs in self.map_data.get("obstacles", []):
+            obstacle_cells.add((obs["original"]["col"], obs["original"]["row"]))
+            obstacle_cells.add((obs["mirror"]["col"], obs["mirror"]["row"]))
+        print("Celdas de obstáculo:", obstacle_cells)
+
+        if (col, row) in obstacle_cells:
+
+            if not self.is_on_obstacle:
+                print("¡Alerta! Dron 2 sobre obstáculo en celda", (col, row))
+                winsound.PlaySound("assets/Bite.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+            self.is_on_obstacle = True
+            return True
+        self.is_on_obstacle = False
+        return False
+
     def start_game(self):
         if not self.map_data:
             messagebox.showwarning("Advertencia", "Selecciona un mapa antes de jugar.")
@@ -190,6 +228,7 @@ class CheckpointScreen:
                 coordenada[0] = lata
                 coordenada[1] = longanisa
         self.dron.setGEOFence(lista_geo)
+        self.second_dron.setGEOFence(lista_geo)
         print(lista_geo)
 
         # Dibujar obstáculos
@@ -235,6 +274,7 @@ class CheckpointScreen:
 
         messagebox.showinfo("Juego Iniciado", "¡Comenzando la carrera con los jugadores conectados!")
         self.start_telemetry_sync(game_canvas)
+        self.start_telemetry_sync_second(game_canvas)
         print(self.get_gps_from_canvas_coordinates(0,0))
 
 
@@ -247,7 +287,9 @@ class CheckpointScreen:
         Aquí solo mostramos o guardamos info, sin offset ni desplazamiento.
         """
         print(f"📡 Telemetría recibida: {telemetry_info}")
-        # Sin offset ni lógica extra
+
+    def process_telemetry_info_second(self, telemetry_info):
+        print(f"📡 Telemetría Jugador 2: {telemetry_info}")
 
     def get_canvas_coordinates_from_gps(self, lat, lon):
         """
@@ -315,6 +357,44 @@ class CheckpointScreen:
 
         update()
 
+    def start_telemetry_sync_second(self, canvas):
+        def update():
+            try:
+                if not self.second_dron:
+                    return
+                lat = self.second_dron.lat
+                lon = self.second_dron.lon
+                if lat == 0.0 and lon == 0.0:
+                    print("⚠ Dron 2 sin coordenadas GPS válidas.")
+                else:
+                    # Para el segundo dron, podés aplicar un offset para diferenciar su visualización.
+                    x, y = self.get_canvas_coordinates_from_gps(lat, lon)
+                    if x is not None and y is not None and self.drone_image_full:
+                        tag = "player_drone_2"
+                        canvas.delete(tag)
+                        map_width = self.map_data["map_size"]["width"]
+                        map_height = self.map_data["map_size"]["height"]
+                        x_old = x
+                        y_old = y
+                        angulo = math.radians(-72)
+                        x = x_old * math.cos(angulo) - y_old * math.sin(angulo)
+                        y = x_old * math.sin(angulo) + y_old * math.cos(angulo)
+                        # Aplicar un offset para que se dibuje en la mitad derecha, por ejemplo:
+                        x += map_width / 2
+                        x = max(0, min(map_width - 30, x))
+                        y = max(0, min(map_height - 30, y))
+                        if self.check_if_on_obstacle_cell_2(x, y):
+                            print("Alerta: Dron 2 sobre obstáculo.")
+                        canvas.create_image(x, y, anchor="nw", image=self.drone_image_full, tag=tag)
+                        print(f"✅ Dron 2 en canvas: x={x:.1f}, y={y:.1f}")
+                    else:
+                        print("❌ No se pudo dibujar el dron 2 (coords o imagen nulas).")
+            except Exception as e:
+                print(f"❌ Error en start_telemetry_sync_second: {e}")
+            canvas.after(35, update)
+
+        update()
+
     # ----------------------------------------------------------------------
     # 5) Utilidades de la interfaz
     # ----------------------------------------------------------------------
@@ -322,6 +402,7 @@ class CheckpointScreen:
         self.player_listbox.delete("1.0", "end")
         for idx, dron in enumerate(self.connected_drones, start=1):
             self.player_listbox.insert("end", f"Jugador {idx}: {dron.state}\n")
+
 
     def render_map_preview(self):
         """
