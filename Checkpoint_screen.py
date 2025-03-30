@@ -22,7 +22,7 @@ class CheckpointScreen:
         self.connected_drones = []
         self.player_positions = {}
         self.frame = parent_frame
-
+        self.is_on_obstacle=False
         # SIN offset artificial
         self.drone_image_full = None
 
@@ -127,8 +127,8 @@ class CheckpointScreen:
 
     def check_if_on_obstacle_cell(self, x, y):
         cell_size = self.map_data["map_size"]["cell_size"]
-        col = int(x / cell_size)
-        row = int(y / cell_size)
+        col = int(x / cell_size)+1
+        row = int(y / cell_size)+1
         print("Dron en celda:", (col, row))
 
         obstacle_cells = set()
@@ -138,9 +138,13 @@ class CheckpointScreen:
         print("Celdas de obstáculo:", obstacle_cells)
 
         if (col, row) in obstacle_cells:
-            print("¡Alerta! Dron sobre obstáculo en celda", (col, row))
-            winsound.PlaySound("assets/alert.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+
+            if not self.is_on_obstacle:
+                print("¡Alerta! Dron sobre obstáculo en celda", (col, row))
+                winsound.PlaySound("assets/Bite.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+            self.is_on_obstacle = True
             return True
+        self.is_on_obstacle=False
         return False
 
     def start_game(self):
@@ -307,7 +311,7 @@ class CheckpointScreen:
             except Exception as e:
                 print(f"❌ Error en start_telemetry_sync: {e}")
 
-            canvas.after(100, update)
+            canvas.after(35, update)
 
         update()
 
