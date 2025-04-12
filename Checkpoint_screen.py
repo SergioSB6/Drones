@@ -14,7 +14,7 @@ import winsound
 from modules.dron_setGeofence import setGEOFence
 from modules.dron_local_telemetry import send_local_telemetry_info
 from modules.dron_nav import go, changeHeading
-from modules.dron_mission import executeMission
+
 
 class CheckpointScreen:
     def __init__(self, dron, parent_frame):
