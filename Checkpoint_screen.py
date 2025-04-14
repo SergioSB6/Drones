@@ -6,7 +6,6 @@ import math
 from PIL import Image, ImageTk
 from Dron import Dron
 import time
-from playsound import playsound
 import threading
 import winsound
 
@@ -15,48 +14,61 @@ from modules.dron_setGeofence import setGEOFence
 from modules.dron_local_telemetry import send_local_telemetry_info
 from modules.dron_nav import go, changeHeading
 
-
 class CheckpointScreen:
-    def __init__(self, dron, parent_frame):
+    def __init__(self, dron, dron2, parent_frame):
         self.dron = dron
-        self.second_dron = Dron()
+        self.dron2 = dron2
         self.map_data = None
         self.connected_drones = []
         self.player_positions = {}
         self.frame = parent_frame
         self.is_on_obstacle = False
+        self.is_on_obstacle2 = False
         self.drone_image_full = None
 
-        # Título
+        # ---------------- CONFIGURAR GRID PRINCIPAL ----------------
+        # Dividimos el frame en filas y columnas para acomodar widgets.
+        self.frame.rowconfigure(0, weight=1)  # Para el título
+        self.frame.rowconfigure(1, weight=1)  # Para la fila de "LISTA" vs "PREVIEW"
+        self.frame.rowconfigure(2, weight=1)  # Para la fila donde pueden ir los botones
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.columnconfigure(1, weight=1)
+
+        # ---------------- TÍTULO ----------------
         label_title = ctk.CTkLabel(self.frame, text="CHECKPOINT RACE MODE", font=("M04_FATAL FURY", 50))
-        label_title.place(relx=0.5, rely=0.05, anchor="n")
+        # Lo ponemos en la primera fila, ocupando 2 columnas
+        label_title.grid(row=0, column=0, columnspan=2, pady=20, sticky="n")
 
-        # Lista de jugadores
-        self.player_listbox = ctk.CTkTextbox(self.frame, width=300, height=300)
-        self.player_listbox.place(relx=0.2, rely=0.4, anchor="center")
+        # ---------------- LISTA DE JUGADORES (Columna 0) ----------------
         label_players = ctk.CTkLabel(self.frame, text="LISTA DE JUGADORES", font=("M04_FATAL FURY", 20))
-        label_players.place(relx=0.2, rely=0.25, anchor="center")
+        label_players.grid(row=1, column=0, padx=10, pady=(0, 5), sticky="n")
 
-        # Vista previa del mapa
+        self.player_listbox = ctk.CTkTextbox(self.frame, width=300, height=300)
+        self.player_listbox.grid(row=2, column=0, padx=10, pady=5, sticky="n")
+
+        # ---------------- PREVIEW MAPA (Columna 1) ----------------
         self.preview_label = ctk.CTkLabel(self.frame, text="PREVIEW MAPA", font=("M04_FATAL FURY", 20))
-        self.preview_label.place(relx=0.7, rely=0.25, anchor="center")
+        self.preview_label.grid(row=1, column=1, padx=10, pady=(0, 5), sticky="n")
 
-        self.map_canvas = ctk.CTkCanvas(self.frame, width=300, height=300, bg="gray")
-        self.map_canvas.place(relx=0.7, rely=0.45, anchor="center")
+        self.map_canvas = ctk.CTkCanvas(self.frame, width=500, height=500, bg="gray")
+        self.map_canvas.grid(row=2, column=1, padx=10, pady=5, sticky="n")
 
-        # Botones
-        self.boton_select_map = ctk.CTkButton(self.frame, text="Seleccionar Mapa", command=self.select_map)
-        self.boton_select_map.place(relx=0.7, rely=0.8, anchor="center")
+        # ---------------- FILA DE BOTONES AL FINAL ----------------
+        # Creamos un frame para agrupar los botones en la parte inferior
+        botones_frame = ctk.CTkFrame(self.frame)
+        botones_frame.grid(row=3, column=0, columnspan=2, pady=(20, 10))
 
-        self.boton_connect = ctk.CTkButton(self.frame, text="Conectar Jugador", command=self.connect_player)
-        self.boton_connect.place(relx=0.5, rely=0.8, anchor="center")
+        self.boton_select_map = ctk.CTkButton(botones_frame, text="Seleccionar Mapa", command=self.select_map)
+        self.boton_select_map.pack(side="left", padx=20)
 
-        self.boton_jugar = ctk.CTkButton(self.frame, text="Jugar", command=self.start_game)
-        self.boton_jugar.place(relx=0.5, rely=0.9, anchor="center")
+        self.boton_connect = ctk.CTkButton(botones_frame, text="Conectar Jugador", command=self.connect_player)
+        self.boton_connect.pack(side="left", padx=20)
+
+        self.boton_jugar = ctk.CTkButton(botones_frame, text="Jugar", command=self.start_game)
+        self.boton_jugar.pack(side="left", padx=20)
 
         self.boton_volver = ctk.CTkButton(self.frame, text="Return", font=("M04_FATAL FURY", 30),
                                           fg_color="transparent", hover=False, command=self.callback_volver)
-        self.boton_volver.place(relx=0.05, rely=0.95, anchor="sw")
 
     # ----------------------------------------------------------------------
     # 1) Seleccionar Mapa y mostrar preview
@@ -84,13 +96,11 @@ class CheckpointScreen:
             print(f"🔌 Intentando conectar a {connection_string} con baud {baud}...")
             self.dron.connect(connection_string, baud, blocking=True)
             if self.dron.state == "connected":
-                print("✅ Conexión exitosa al dron.")
+                print("✅Jugador 1 conectado.")
                 self.connected_drones.append(self.dron)
                 # Iniciar telemetría
                 self.dron.send_telemetry_info(self.process_telemetry_info)
-                print("📡 Enviando datos de telemetría al juego.")
                 self.update_player_list()
-                messagebox.showinfo("Conexión Exitosa", "Jugador conectado correctamente.")
             else:
                 messagebox.showerror("Error", "El dron no está en estado 'connected'.")
         except Exception as e:
@@ -100,12 +110,13 @@ class CheckpointScreen:
         try:
             connection_string2 = "tcp:127.0.0.1:5772"
             print(f"Conectando jugador 2 a {connection_string2}...")
-            self.second_dron.connect(connection_string2, baud, blocking=True)
-            if self.second_dron.state == "connected":
+            self.dron2.connect(connection_string2, baud, blocking=True)
+            if self.dron2.state == "connected":
                 print("✅✅Jugador 2 conectado.")
-                self.connected_drones.append(self.second_dron)
+                self.connected_drones.append(self.dron2)
                 # Se puede usar un callback distinto si querés diferenciarlos
-                self.second_dron.send_telemetry_info(self.process_telemetry_info_second)
+                self.dron2.send_telemetry_info(self.process_telemetry_info_second)
+                self.update_player_list()
             else:
                 messagebox.showerror("Error", "El dron del jugador 2 no está en estado 'connected'.")
         except Exception as e:
@@ -177,13 +188,24 @@ class CheckpointScreen:
 
         if (col, row) in obstacle_cells:
 
-            if not self.is_on_obstacle:
+            if not self.is_on_obstacle2:
                 print("¡Alerta! Dron 2 sobre obstáculo en celda", (col, row))
                 winsound.PlaySound("assets/Bite.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
-            self.is_on_obstacle = True
+            self.is_on_obstacle2 = True
             return True
-        self.is_on_obstacle = False
+        self.is_on_obstacle2 = False
         return False
+
+    def arm_and_takeoff(self, drone):
+        try:
+            print(f"Iniciando armado para {drone}")
+            drone.arm()  # Comando para armar
+            time.sleep(1)  # Espera para dar tiempo a que se procese el armado
+            drone.takeOff(5)  # Comando para despegar a 5 metros
+            print(f"Comando de despegue enviado para {drone}")
+        except Exception as e:
+            print(f"Error al armar/despegar {drone}: {e}")
+
 
     def start_game(self):
         if not self.map_data:
@@ -228,7 +250,7 @@ class CheckpointScreen:
                 coordenada[0] = lata
                 coordenada[1] = longanisa
         self.dron.setGEOFence(lista_geo)
-        self.second_dron.setGEOFence(lista_geo)
+        self.dron2.setGEOFence(lista_geo)
         print(lista_geo)
 
         # Dibujar obstáculos
@@ -277,23 +299,20 @@ class CheckpointScreen:
         self.start_telemetry_sync_second(game_canvas)
         print(self.get_gps_from_canvas_coordinates(0,0))
 
+        threading.Thread(target=self.arm_and_takeoff, args=(self.dron,)).start()
+        threading.Thread(target=self.arm_and_takeoff, args=(self.dron2,)).start()
 
     # ----------------------------------------------------------------------
     # 4) Telemetría y coordenadas
     # ----------------------------------------------------------------------
     def process_telemetry_info(self, telemetry_info):
-        """
-        Callback de telemetría.
-        Aquí solo mostramos o guardamos info, sin offset ni desplazamiento.
-        """
-        print(f"📡 Telemetría recibida: {telemetry_info}")
+        print(f"📡 Telemetría Jugador 1: {telemetry_info}")
 
     def process_telemetry_info_second(self, telemetry_info):
         print(f"📡 Telemetría Jugador 2: {telemetry_info}")
 
     def get_canvas_coordinates_from_gps(self, lat, lon):
         """
-        Convierte lat/lon a coords de canvas, sin offset.
         Usa 'top_left' como referencia y 'cell_size' como px/m.
         """
         try:
@@ -360,14 +379,13 @@ class CheckpointScreen:
     def start_telemetry_sync_second(self, canvas):
         def update():
             try:
-                if not self.second_dron:
+                if not self.dron2:
                     return
-                lat = self.second_dron.lat
-                lon = self.second_dron.lon
+                lat = self.dron2.lat
+                lon = self.dron2.lon
                 if lat == 0.0 and lon == 0.0:
                     print("⚠ Dron 2 sin coordenadas GPS válidas.")
                 else:
-                    # Para el segundo dron, podés aplicar un offset para diferenciar su visualización.
                     x, y = self.get_canvas_coordinates_from_gps(lat, lon)
                     if x is not None and y is not None and self.drone_image_full:
                         tag = "player_drone_2"
@@ -379,8 +397,7 @@ class CheckpointScreen:
                         angulo = math.radians(-72)
                         x = x_old * math.cos(angulo) - y_old * math.sin(angulo)
                         y = x_old * math.sin(angulo) + y_old * math.cos(angulo)
-                        # Aplicar un offset para que se dibuje en la mitad derecha, por ejemplo:
-                        x += map_width / 2
+
                         x = max(0, min(map_width - 30, x))
                         y = max(0, min(map_height - 30, y))
                         if self.check_if_on_obstacle_cell_2(x, y):
@@ -400,9 +417,18 @@ class CheckpointScreen:
     # ----------------------------------------------------------------------
     def update_player_list(self):
         self.player_listbox.delete("1.0", "end")
-        for idx, dron in enumerate(self.connected_drones, start=1):
-            self.player_listbox.insert("end", f"Jugador {idx}: {dron.state}\n")
 
+        # Comprueba el estado del primer dron
+        if hasattr(self, "dron") and self.dron:
+            self.player_listbox.insert("end", f"Jugador 1: {self.dron.state}\n")
+        else:
+            self.player_listbox.insert("end", "Jugador 1: No conectado\n")
+
+        # Comprueba el estado del segundo dron
+        if hasattr(self, "dron2") and self.dron2:
+            self.player_listbox.insert("end", f"Jugador 2: {self.dron2.state}\n")
+        else:
+            self.player_listbox.insert("end", "Jugador 2: No conectado\n")
 
     def render_map_preview(self):
         """
@@ -421,12 +447,11 @@ class CheckpointScreen:
             return
         map_width_cells = map_width // cell_size
         map_height_cells = map_height // cell_size
-
-        scale_x = 300 / map_width_cells if map_width_cells else 1
-        scale_y = 300 / map_height_cells if map_height_cells else 1
+        scale_x = 500 / map_width_cells if map_width_cells else 1
+        scale_y = 500 / map_height_cells if map_height_cells else 1
         scale = min(scale_x, scale_y)
-        offset_x = (300 - (map_width_cells * scale)) / 2
-        offset_y = (300 - (map_height_cells * scale)) / 2
+        offset_x = (500 - (map_width_cells * scale)) / 2
+        offset_y = (500 - (map_height_cells * scale)) / 2
 
         background_path = self.map_data.get("background")
         if background_path and os.path.exists(background_path):

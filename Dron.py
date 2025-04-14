@@ -1,6 +1,6 @@
 class Dron(object):
     def __init__(self):
-        self.is_on_obstacle=False
+
         self.state = "disconnected"
         self.lat = 0.0
         self.lon = 0.0
@@ -16,7 +16,7 @@ class Dron(object):
         '''
 
         self.going = False # se usa en dron_nav
-        self.navSpeed = 1 # se usa en dron_nav
+        self.navSpeed = 5 # se usa en dron_nav
         self.direction = 'Stop' # se usa en dron_nav
         self.id = None
         self.sendTelemetryInfo = False #usado en dron_telemetry
@@ -42,7 +42,6 @@ class Dron(object):
     from modules.dron_RTL_Land import  RTL, Land, _goDown
     from modules.dron_nav import _prepare_command, startGo, stopGo, go, _startGo, changeHeading, fixHeading, unfixHeading, changeNavSpeed
     from modules.dron_goto import goto, _goto, _distanceToDestinationInMeters
-    from modules.dron_flightPlan import executeFlightPlan, _executeFlightPlan
     from modules.dron_parameters import getParams, _getParams, setParams, _setParams
     from modules.dron_setGeofence import setGEOFence, _setGEOFence
     from modules.dron_telemetry import send_telemetry_info, _send_telemetry_info, stop_sending_telemetry_info
@@ -50,4 +49,3 @@ class Dron(object):
     from modules.dron_local_telemetry import send_local_telemetry_info, _send_local_telemetry_info, stop_sending_local_telemetry_info
     from modules.dron_mov import move, _move, _prepare_command_mov, setStep, moveto, _moveto, _prepare_command_movto, inGeofence, setLocalGeofence
     from modules.dron_mov import inGeofence, _futurePosition, check, _distance, _destination,setNavSpeed
-    from modules.dron_mission import executeMission, _executeMission

@@ -5,168 +5,159 @@ from tkinter import messagebox
 from modules import dron_nav
 
 class ControlesAdmin:
-    def __init__(self, dron):
+    def __init__(self, dron, drone_label="Dron 1"):
         self.dron = dron
+        self.drone_label = drone_label
+        self.armBtn = None
+        self.takeOffBtn = None
+        self.RTLBtn = None
+        self.speedSldr = None
 
-    def arm(self, button):
+    def arm(self):
         """
-        Arma el dron en modo no bloqueante.
+        Arma el dron de forma no bloqueante y actualiza el botón.
         """
-        global dron, armBtn
-        # Llamada no bloqueante, con callback e identificador de mensaje 'ARMED'
         try:
+            if self.armBtn:
+                self.armBtn.configure(fg_color='yellow', text='Armando...')
             self.dron.arm(blocking=False, callback=self.informar, params='ARMED')
-        except:
-            self.dron.state=="connected"
-            armBtn.configure(fg_color='dark orange', text='Armar')
-        # Mientras se arma, ponemos el botón en amarillo
-        armBtn.configure(fg_color='yellow', text='Armando...')
+        except Exception as e:
+            print("Error al armar el dron:", e)
+            if self.armBtn:
+                self.armBtn.configure(fg_color='dark orange', text='Armar')
 
     def takeoff(self):
         """
-        Despega el dron en modo no bloqueante.
+        Despega el dron a una altura predefinida (5 metros) en modo no bloqueante.
         """
-        global dron, takeOffBtn
         try:
             alt = 5
-            # Llamada no bloqueante, con callback e identificador 'VOLANDO'
+            if self.takeOffBtn:
+                self.takeOffBtn.configure(fg_color='yellow', text='Despegando...')
             self.dron.takeOff(alt, blocking=False, callback=self.informar, params='VOLANDO')
-            # Mientras despega, el botón en amarillo
-            takeOffBtn.configure(fg_color='yellow', text='Despegando...')
-        except:
-            messagebox.showerror("error", "Introduce la altura para el despegue")
+        except Exception as e:
+            print("Error al despegar:", e)
+            messagebox.showerror("Error", "Introduce una altura válida para el despegue.")
 
     def informar(self, mensaje):
         """
-        Función de callback que se activa cuando acaban las funciones no bloqueantes
-        (arm, takeOff, RTL). Actualiza los botones según el mensaje recibido.
+        Callback para actualizar la interfaz cuando una acción asíncrona (arm, takeOff, RTL) finaliza.
         """
-        global takeOffBtn, RTLBtn, armBtn, landBtn
-        global dron
-
-        messagebox.showinfo("showinfo", "Mensaje del dron:--->  " + mensaje)
+        messagebox.showinfo("Información", "Mensaje del dron: " + mensaje)
 
         if mensaje == 'ARMED':
-            # El dron ha terminado de armar
-            armBtn.configure(fg_color='green', text='Armado')
+            if self.armBtn:
+                self.armBtn.configure(fg_color='green', text='Armado')
 
-        if mensaje == 'VOLANDO':
-            # El dron ha terminado de despegar
-            takeOffBtn.configure(fg_color='green', text='En el aire')
+        elif mensaje == 'VOLANDO':
+            if self.takeOffBtn:
+                self.takeOffBtn.configure(fg_color='green', text='En el aire')
 
-        if mensaje == "EN CASA":
-            # El dron ha terminado de hacer RTL
-            RTLBtn.configure(fg_color='green', text='En casa')
-            # Devolver botones a la situación inicial
-            armBtn.configure(fg_color='dark orange', text='Armar')
-            takeOffBtn.configure(fg_color='dark orange', text='Despegar')
-            RTLBtn.configure(fg_color='dark orange', text='RTL')
-            dron.disconnect()
+        elif mensaje == "EN CASA":
+            if self.RTLBtn:
+                self.RTLBtn.configure(fg_color='green', text='En casa')
+            if self.armBtn:
+                self.armBtn.configure(fg_color='dark orange', text='Armar')
+            if self.takeOffBtn:
+                self.takeOffBtn.configure(fg_color='dark orange', text='Despegar')
+            if self.RTLBtn:
+                self.RTLBtn.configure(fg_color='dark orange', text='RTL')
+            self.dron.disconnect()
 
     def RTL(self):
         """
-        Retorno a casa en modo no bloqueante.
+        Ejecuta el retorno a casa (RTL) de forma no bloqueante.
         """
-        global dron, RTLBtn
         if self.dron.going:
             self.dron.stopGo()
         self.dron.RTL(blocking=False, callback=self.informar, params='EN CASA')
-        RTLBtn.configure(fg_color='yellow', text='Retornando...')
+        if self.RTLBtn:
+            self.RTLBtn.configure(fg_color='yellow', text='Retornando...')
 
-    # ====== NAVIGATION FUNCTIONS ======
-    def change_speed(speed):
-        global dron
-        dron.changeNavSpeed(float(1))
+    def change_speed(self, speed):
+        """
+        Cambia la velocidad de navegación según el valor del slider.
+        """
+        try:
+            self.dron.changeNavSpeed(float(speed))
+        except Exception as e:
+            print("Error al cambiar la velocidad:", e)
 
     def go(self, direction):
-        global dron
+        """
+        Envía el comando de navegación en la dirección especificada.
+        """
         if not self.dron.going:
             self.dron.startGo()
         self.dron.go(direction)
 
-    # ================= DASHBOARD INICIAL =================
     def crear_ventana(self):
-        global dron
-        global altShowLbl, headingShowLbl, speedSldr, gradesSldr, speedShowLbl
-        global takeOffBtn, armBtn, RTLBtn
-        global alt_entry
-
+        """
+        Crea y configura la ventana de control con todos los botones y el slider.
+        """
         ventana = ctk.CTkToplevel()
-        ventana.title("Ventana con botones y entradas")
+        ventana.title(f"Controles - {self.drone_label}")
         ventana.rowconfigure(0, weight=1)
         ventana.columnconfigure(0, weight=1)
         ventana.columnconfigure(1, weight=1)
 
-        # Configuración del Frame de Control
+        # Frame principal de controles
         controlFrame = ctk.CTkFrame(ventana)
         controlFrame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-
-        controlFrame.rowconfigure(0, weight=1)
-        controlFrame.rowconfigure(1, weight=1)
-        controlFrame.rowconfigure(2, weight=1)
-        controlFrame.rowconfigure(3, weight=1)
-        controlFrame.rowconfigure(4, weight=1)
-        controlFrame.rowconfigure(5, weight=1)
-
+        for i in range(6):
+            controlFrame.rowconfigure(i, weight=1)
         controlFrame.columnconfigure(0, weight=1)
 
-        # Botón Armar (modo no bloqueante)
-        armBtn = ctk.CTkButton(controlFrame, text="Armar", fg_color="dark orange",
-                               command=lambda: self.arm(armBtn))
-        armBtn.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        # Botón Armar
+        self.armBtn = ctk.CTkButton(controlFrame, text="Armar", fg_color="dark orange", command=self.arm)
+        self.armBtn.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
-        # Botón Despegar (modo no bloqueante)
-        takeOffBtn = ctk.CTkButton(controlFrame, text="Despegar", fg_color="dark orange", command=self.takeoff)
-        takeOffBtn.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
+        # Botón Despegar
+        self.takeOffBtn = ctk.CTkButton(controlFrame, text="Despegar", fg_color="dark orange", command=self.takeoff)
+        self.takeOffBtn.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
 
-        # Botón RTL (modo no bloqueante)
-        RTLBtn = ctk.CTkButton(controlFrame, text="RTL", fg_color="dark orange", command=self.RTL)
-        RTLBtn.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
+        # Botón RTL
+        self.RTLBtn = ctk.CTkButton(controlFrame, text="RTL", fg_color="dark orange", command=self.RTL)
+        self.RTLBtn.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
 
-        # ================= FRAME/BOTONES NAVEGACIÓN =================
-        speedSldr = ctk.CTkSlider(controlFrame, from_=0, to=20, number_of_steps=20, command=self.change_speed)
-        speedSldr.set(1)  # velocidad por defecto de 1 m/s
-        speedSldr.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
+        # Slider de velocidad
+        self.speedSldr = ctk.CTkSlider(controlFrame, from_=0, to=20, number_of_steps=20, command=self.change_speed)
+        self.speedSldr.set(1)  # Velocidad por defecto de 1 m/s
+        self.speedSldr.grid(row=4, column=0, padx=5, pady=5, sticky="nsew")
 
+        # Frame para botones de navegación
         navFrame = ctk.CTkFrame(controlFrame)
         navFrame.grid(row=5, column=0, padx=50, pady=5, sticky="nsew")
+        for i in range(3):
+            navFrame.rowconfigure(i, weight=1)
+            navFrame.columnconfigure(i, weight=1)
 
-        navFrame.rowconfigure(0, weight=1)
-        navFrame.rowconfigure(1, weight=1)
-        navFrame.rowconfigure(2, weight=1)
+        # Especificaciones: (texto del botón, dirección, fila, columna)
+        btn_specs = [
+            ("NW", "NorthWest", 0, 0),
+            ("No", "North", 0, 1),
+            ("NE", "NorthEast", 0, 2),
+            ("We", "West", 1, 0),
+            ("St", "Stop", 1, 1),
+            ("Ea", "East", 1, 2),
+            ("SW", "SouthWest", 2, 0),
+            ("So", "South", 2, 1),
+            ("SE", "SouthEast", 2, 2),
+        ]
 
-        navFrame.columnconfigure(0, weight=1)
-        navFrame.columnconfigure(1, weight=1)
-        navFrame.columnconfigure(2, weight=1)
-
-        NWBtn = ctk.CTkButton(navFrame, text="NW", fg_color="dark orange", command=lambda: self.go("NorthWest"))
-        NWBtn.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
-
-        NoBtn = ctk.CTkButton(navFrame, text="No", fg_color="dark orange", command=lambda: self.dron.go("North"))
-        NoBtn.grid(row=0, column=1, padx=2, pady=2, sticky="nsew")
-
-        NEBtn = ctk.CTkButton(navFrame, text="NE", fg_color="dark orange", command=lambda: self.go("NorthEast"))
-        NEBtn.grid(row=0, column=2, padx=2, pady=2, sticky="nsew")
-
-        WeBtn = ctk.CTkButton(navFrame, text="We", fg_color="dark orange", command=lambda: self.go("West"))
-        WeBtn.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
-
-        StopBtn = ctk.CTkButton(navFrame, text="St", fg_color="dark orange", command=lambda: self.go("Stop"))
-        StopBtn.grid(row=1, column=1, padx=2, pady=2, sticky="nsew")
-
-        EaBtn = ctk.CTkButton(navFrame, text="Ea", fg_color="dark orange", command=lambda: self.go("East"))
-        EaBtn.grid(row=1, column=2, padx=2, pady=2, sticky="nsew")
-
-        SWBtn = ctk.CTkButton(navFrame, text="SW", fg_color="dark orange", command=lambda: self.go("SouthWest"))
-        SWBtn.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
-
-        SoBtn = ctk.CTkButton(navFrame, text="So", fg_color="dark orange", command=lambda: self.go("South"))
-        SoBtn.grid(row=2, column=1, padx=2, pady=2, sticky="nsew")
-
-        SEBtn = ctk.CTkButton(navFrame, text="SE", fg_color="dark orange", command=lambda: self.go("SouthEast"))
-        SEBtn.grid(row=2, column=2, padx=2, pady=2, sticky="nsew")
+        for text, direction, row, col in btn_specs:
+            btn = ctk.CTkButton(
+                navFrame,
+                text=text,
+                fg_color="dark orange",
+                command=lambda d=direction: self.go(d)
+            )
+            btn.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
 
         return ventana
 
     def abrir_ventana(self):
-        ventana = self.crear_ventana()
+        """
+        Abre la ventana de controles.
+        """
+        return self.crear_ventana()
