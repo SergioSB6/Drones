@@ -35,6 +35,7 @@ class MapFrameClass:
         self.setup_ui()
         self.create_geofence_cells()
 
+
     def calculate_cell_size(self):
         max_width = 448
         max_height = 980

@@ -1,138 +1,15 @@
+import os
 from tkinter import Menubutton
 import customtkinter as ctk
 from Dron import Dron
 from Editor_Mapa import MapFrameClass
 from Checkpoint_screen import CheckpointScreen
 import platform
+import subprocess
 import sys
 import shutil
 from Controles_Admin import ControlesAdmin
-import subprocess
-import time
-import stat
-import os
-import ctypes
-from AnimatedGif import *
-from screeninfo import get_monitors
-import pyglet
-import pywinstyles
-from pymavlink import mavutil
 
-pyglet.options.win32_gdi_font = True
-pyglet.font.add_file('assets/m04fatal_fury/m04.ttf')
-
-"""
-def main():
-
-    # base_dir = os.path.dirname(os.path.abspath(__file__))
-    # print("Directorio base:", base_dir)
-    #
-    # # Construir la ruta relativa al ejecutable de Mission Planner
-    # # Suponiendo la siguiente estructura:
-    # # /miProyecto
-    # #    /MissionPlanner
-    # #         MissionPlanner.exe
-    # mp_exe = os.path.join(base_dir, "Mission Planner", "Mission Planner", "MissionPlanner.exe")
-    # print("Ruta Mission Planner:", mp_exe)
-    #
-    # # Verificar que el ejecutable exista
-    # if not os.path.exists(mp_exe):
-    #     print(f"Error: No se encontró MissionPlanner.exe en {mp_exe}")
-    #     return
-    #
-    # # Comando para iniciar Mission Planner en modo simulación y Copter Swarm - Multilink
-    # # Dependiendo de tu versión, podrían usarse parámetros como:
-    # # - /sim : Indica que se inicie en modo simulación
-    # # - /swarm o /multilink : Indica que se use el modo Copter Swarm – Multilink
-    # # Si es necesario, consulta la documentación de tu versión de Mission Planner
-    # cmd = [mp_exe, "/sim", "/multilink"]
-    # print("Ejecutando comando:", cmd)
-    #
-    # # Para que se abra en una nueva ventana de CMD, se usa el flag CREATE_NEW_CONSOLE (propio de Windows)
-    # creation_flags = subprocess.CREATE_NEW_CONSOLE
-    #
-    # # Ejecutar el comando
-    # subprocess.Popen(cmd, cwd=base_dir, creationflags=creation_flags)
-    #
-    # print("Mission Planner se ha lanzado en modo simulación Copter Swarm – Multilink.")
-
-
-
-if __name__ == "__main__":
-    main()
-
-def main():
-    # Obtiene el directorio base (la carpeta donde se encuentra este script)
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    print("Base dir:", base_dir)
-
-    # Rutas relativas a los ejecutables y archivos necesarios
-    sitl_exe = os.path.join(base_dir, "Mission Planner", "sitl", "ArduCopter.exe")
-    print("Ruta SITL:", sitl_exe)
-
-    defaults_path = os.path.join(base_dir, "Mission Planner", "sitl", "default_params", "copter.parm")
-    print("Ruta defaults:", defaults_path)
-
-    mission_planner_exe = os.path.join(base_dir, "Mission Planner", "Mission Planner", "MissionPlanner.exe")
-    print("Ruta Mission Planner:", mission_planner_exe)
-
-    # Verificar si los archivos existen
-    for path, desc in [(sitl_exe, "SITL"), (defaults_path, "Defaults"), (mission_planner_exe, "Mission Planner")]:
-        if not os.path.exists(path):
-            print(f"Error: No se encontró {desc} en: {path}")
-
-    # Comando para la primera instancia de SITL (instance 0)
-    cmd_sitl_1 = [
-        sitl_exe,
-        "--model", "+",
-        "--speedup", "1",
-        "--instance", "0",
-        "--defaults", defaults_path
-
-    ]
-
-    # Comando para la segunda instancia de SITL (instance 1)
-    cmd_sitl_2 = [
-        sitl_exe,
-        "--model", "+",
-        "--speedup", "1",
-        "--instance", "1",
-        "--defaults", defaults_path,
-        "--home", "41.276267,1.988389,3,0"
-    ]
-
-    print("Lanzando SITL para Drone 1...")
-    process_sitl1 = subprocess.Popen(cmd_sitl_1, cwd=base_dir)
-    time.sleep(2)  # Espera para que se inicie la primera instancia
-
-    print("Lanzando SITL para Drone 2...")
-    process_sitl2 = subprocess.Popen(cmd_sitl_2, cwd=base_dir)
-    time.sleep(2)
-
-    # Comando para Mission Planner - para la instancia 0 (puerto 5760)
-    cmd_mp_1 = [
-        mission_planner_exe,
-        "/connect", "tcp:127.0.0.1:5760"
-    ]
-    # Comando para Mission Planner - para la instancia 1 (puerto 5770)
-    cmd_mp_2 = [
-        mission_planner_exe,
-        "/connect", "tcp:127.0.0.1:5770"
-    ]
-
-    print("Lanzando Mission Planner para Drone 1...")
-    process_mp1 = subprocess.Popen(cmd_mp_1, cwd=base_dir)
-    time.sleep(1)
-
-    print("Lanzando Mission Planner para Drone 2...")
-    process_mp2 = subprocess.Popen(cmd_mp_2, cwd=base_dir)
-
-    print("Todas las instancias se han lanzado correctamente.")
-
-
-if __name__ == "__main__":
-    main()
-"""
 
 def install_dependencies():
     # Instala las bibliotecas necesarias si no están instaladas
@@ -149,36 +26,16 @@ def install_dependencies():
 
 def install_custom_font():
     # Ruta a la fuente en la carpeta assets
-
     font_path = os.path.join(os.getcwd(), 'assets', 'm04fatal_fury', 'm04.ttf')
-    print(f"font_path: {font_path}")
 
     if platform.system() == 'Windows':
         # Copia la fuente a la carpeta de fuentes de Windows
         try:
-            windows_fonts_dir = os.path.join(os.environ['WINDIR'], "Fonts")
+            windows_fonts_dir = os.path.join(os.environ['WINDIR'], 'Fonts')
             font_dest_path = os.path.join(windows_fonts_dir, 'm04.ttf')
-            print(f"font_dest_path: {font_dest_path}")
-            print(f"windows_font_dir: {windows_fonts_dir}")
-
-
-            if not os.path.isfile(windows_fonts_dir):  # Evita copiar si ya está instalada
-
-                print(os.access(font_path, os.F_OK))
-                print(os.access(windows_fonts_dir, os.X_OK))
-                try:
-                    try:
-                        os.chmod(windows_fonts_dir, stat.S_ISUID)
-                        shutil.copy(font_path, windows_fonts_dir)
-                    except Exception as e:
-                        print(f"Error al copiar: {e}")
-                    try:
-                        ctypes.windll.gdi32.AddFontResourceEx(font_dest_path, 0, 0)
-                    except Exception as e:
-                        print(f"Error al añadir el recurso: {e}")
-                    print("Fuente instalada correctamente en Windows.")
-                except Exception as e:
-                    print(f"Acceso denegado: {e}")
+            if not os.path.isfile(font_dest_path):  # Evita copiar si ya está instalada
+                shutil.copy(font_path, font_dest_path)
+                print("Fuente instalada correctamente en Windows.")
             else:
                 print("La fuente ya está instalada.")
         except Exception as e:
@@ -187,14 +44,12 @@ def install_custom_font():
     else:
         # Para sistemas operativos diferentes a Windows, muestra un mensaje informativo
         print("Para otros sistemas, instala la fuente manualmente desde la carpeta assets/fonts.")
-for m in get_monitors():
-    print(str(m))
 
-install_custom_font()
+install_dependencies()
 
 # ================= DASHBOARD INICIAL =================
-dron = Dron()    # Dron 1
-dron2 = Dron()   # Dron 2
+global dron
+dron = Dron()
 ctk.set_appearance_mode("dark")  # Modo oscuro
 ctk.set_default_color_theme("blue")  # Tema por defecto
 
@@ -229,6 +84,8 @@ ventana.bind("<Escape>", end_fullscreen)
 frame_titulo = ctk.CTkFrame(master=ventana)  # Primer marco (titulo)
 frame_titulo.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
 
+
+
 frame_menu = ctk.CTkFrame(master=ventana)  # Segundo marco (Juego)
 frame_menu.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
 
@@ -240,12 +97,6 @@ frame_CheckPoint.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la
 
 frame_Editor_mapas = ctk.CTkFrame(master=ventana)  # Segundo marco (Editor de mapas)
 frame_Editor_mapas.place(relx=0, rely=0, relwidth=1, relheight=1)  # Ocupa toda la ventana
-
-img = Image.open('assets/Animacion_2.gif')
-img = img.resize((1280,720))
-photoImg = ImageTk.PhotoImage(img)
-gif_label = AnimatedGif(frame_titulo,'assets/Animacion_2.gif', 0.04)
-gif_label.place(relx=0, rely=0, relwidth=1, relheight=1)
 
 # ================== FUNCIONES DE NAVEGACIÓN ==================
 
@@ -259,9 +110,9 @@ def volver_titulo():
 
 # ================== CONTENIDO DEL TITULO ==================
 mostrar_frame(frame_titulo)
-label = ctk.CTkLabel(master=frame_titulo, text="DroneLab", font=("M04_FATAL FURY", 80),bg_color="#000001")
-label.place(anchor="n", rely=0.1, relx=0.5)
-pywinstyles.set_opacity(label, value=1, color="#000001")
+# Agregar una etiqueta de texto
+label = ctk.CTkLabel(master=frame_titulo, text="DroneLab", font=("M04_FATAL FURY", 80))
+label.pack(pady=20)
 
 # Botón con efecto de rebote
 increase = True
@@ -287,54 +138,44 @@ def bounce_button():
 def boton_click():
     mostrar_frame(frame_menu)
 
-boton_play = ctk.CTkButton(master=frame_titulo, text="Play!", font=("M04_FATAL FURY", 50), fg_color="transparent", bg_color= "#000001",  hover=False, command=boton_click, width=300, height=50)
+boton_play = ctk.CTkButton(master=frame_titulo, text="Play!", font=("M04_FATAL FURY", 50), fg_color="transparent", hover=False, command=boton_click, width=300, height=50)
 boton_play.pack(pady=100, padx=0, side="bottom")
-pywinstyles.set_opacity(boton_play, value=1, color="#000001")
 
 # Iniciar rebote
 bounce_button()
-gif_label.start()
+
 # ================== CONTENIDO DEL MENÚ PRINCIPAL ==================
 
 # Agregar una etiqueta y botón en el marco del juego
 label_select = ctk.CTkLabel(master=frame_menu, text="Select game", font=("M04_FATAL FURY", 70))
 label_select.pack(pady=20, side="top")
 
-
-def abrir_configuracion_avanzada():
-    print("Abrir configuración avanzada para Dron 1")
-    controlador_dron1 = ControlesAdmin(dron, drone_label="Dron 1")
-    ventana_dron1 = controlador_dron1.abrir_ventana()
-
-
-# Función para abrir la botonera del dron 2
-def abrir_configuracion_avanzada_dron2():
-    print("Abrir configuración avanzada para Dron 2")
-    controlador_dron2 = ControlesAdmin(dron2, drone_label="Dron 2")
-    ventana_dron2 = controlador_dron2.abrir_ventana()
-
-
-
+# Crear una función para mostrar el menú desplegable
 def mostrar_menu():
-    menu_frame = ctk.CTkFrame(frame_menu, width=150, height=150, corner_radius=10)
-    menu_frame.place(x=10, y=50)
+    # Crear un frame para que actúe como menú desplegable
+    menu_frame = ctk.CTkFrame(frame_menu, width=150, height=100, corner_radius=10)
+    menu_frame.place(x=10, y=50)  # Posicionar debajo del botón de engranaje
 
-    boton_configuracion = ctk.CTkButton(menu_frame, text="Config Dron 1", command=abrir_configuracion_avanzada,
-                                        width=130, height=30)
+    # Crear botones dentro del menú desplegable
+    boton_configuracion = ctk.CTkButton(menu_frame, text="Configuración avanzada", command=abrir_configuracion_avanzada, width=130, height=30)
     boton_configuracion.pack(pady=5)
-
-    boton_configuracion2 = ctk.CTkButton(menu_frame, text="Config Dron 2", command=abrir_configuracion_avanzada_dron2,
-                                         width=130, height=30)
-    boton_configuracion2.pack(pady=5)
 
     boton_sonido = ctk.CTkButton(menu_frame, text="Sonido", command=ajustar_sonido, width=130, height=30)
     boton_sonido.pack(pady=5)
 
-    # Para ocultar el menú al hacer clic en cualquier parte del frame
+    # Ocultar el menú al hacer clic en cualquier parte de la pantalla
     def ocultar_menu(event):
         menu_frame.place_forget()
 
     frame_menu.bind("<Button-1>", ocultar_menu)
+
+# Funciones para cada opción del menú
+def abrir_configuracion_avanzada():
+    global dron
+    print("Abrir configuración avanzada")
+    ca=ControlesAdmin(dron)
+    ca.abrir_ventana()
+
 
 
 def ajustar_sonido():
@@ -358,14 +199,15 @@ def showcheckpoint():
         widget.destroy()
 
     # Crear CheckpointScreen en frame_CheckPoint
-    checkpoint_screen = CheckpointScreen(dron, dron2, frame_CheckPoint)
+    checkpoint_screen = CheckpointScreen(dron, frame_CheckPoint)
     boton_volver4 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30),
                                   fg_color="transparent", hover=False, command=volver_menu)
     boton_volver4.place(relx=0.01, rely=0.95, anchor="sw")
     # Mostrar el frame del checkpoint
     mostrar_frame(frame_CheckPoint)
-    mostrar_frame(frame_CheckPoint)
 
+
+    mostrar_frame(frame_CheckPoint)
 def CheckPoint():
     mostrar_frame(frame_CheckPoint)
 
