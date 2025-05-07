@@ -36,6 +36,7 @@ def _goDown(self, mode, callback=None, params=None):
 
 
 def RTL(self, blocking=True, callback=None, params=None):
+
     if self.state == 'flying':
         self.state = 'returning'
         if blocking:

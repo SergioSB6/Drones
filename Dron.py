@@ -16,7 +16,7 @@ class Dron(object):
         '''
 
         self.going = False # se usa en dron_nav
-        self.navSpeed = 5 # se usa en dron_nav
+        self.navSpeed = 1 # se usa en dron_nav
         self.direction = 'Stop' # se usa en dron_nav
         self.id = None
         self.sendTelemetryInfo = False #usado en dron_telemetry

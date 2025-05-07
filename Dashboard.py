@@ -9,7 +9,83 @@ import subprocess
 import sys
 import shutil
 from Controles_Admin import ControlesAdmin
+<<<<<<< HEAD
 
+=======
+import subprocess
+import time
+import stat
+import os
+import ctypes
+from AnimatedGif import *
+from screeninfo import get_monitors
+import pyglet
+import pywinstyles
+from pymavlink import mavutil
+
+pyglet.options.win32_gdi_font = True
+pyglet.font.add_file('assets/m04fatal_fury/m04.ttf')
+
+def main():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    print("Directorio base:", base_dir)
+
+    # Rutas a los ejecutables
+    sitl_exe = os.path.join(base_dir, "Mission Planner", "sitl", "ArduCopter.exe")
+    defaults  = os.path.join(base_dir, "Mission Planner", "sitl", "default_params", "copter.parm")
+    mp_exe    = os.path.join(base_dir, "Mission Planner", "Mission Planner", "MissionPlanner.exe")
+
+    # Verificaciones
+    for path,name in [(sitl_exe,"SITL"), (defaults,"copter.parm"), (mp_exe,"Mission Planner")]:
+        if not os.path.isfile(path):
+            print(f"ERROR: No encontrado {name} en:\n  {path}")
+            return
+
+    flags = subprocess.CREATE_NEW_CONSOLE
+
+    # SITL 1 → puerto TCP 5762
+    cmd_sitl1 = [
+        sitl_exe,
+        "--model", "+",
+        "--speedup", "3",
+        "--instance", "0",
+        "--defaults", defaults,
+        "--home", "41.276358174374515, 1.988269781384222,3,0",
+        "-P", "SYSID_THISMAV=1",
+
+    ]
+    print("Lanzando SITL #1:", " ".join(cmd_sitl1))
+    subprocess.Popen(cmd_sitl1, cwd=base_dir, creationflags=flags)
+    time.sleep(2)
+
+    # SITL 2 → puerto TCP 5772
+    cmd_sitl2 = [
+        sitl_exe,
+        "--model", "+",
+        "--speedup", "3",
+        "--instance", "1",
+        "--defaults", defaults,
+        "--home", "41.27622147922305, 1.9883288804776904,3,0",
+        "-P", "SYSID_THISMAV=2",
+
+    ]
+    print("Lanzando SITL #2:", " ".join(cmd_sitl2))
+    subprocess.Popen(cmd_sitl2, cwd=base_dir, creationflags=flags)
+    time.sleep(2)
+
+    # Una sola Mission Planner → conectar al puerto 5762 (puedes cambiarlo a 5772 si quieres)
+    cmd_mp = [
+        mp_exe,
+        "/connect", "tcp:127.0.0.1:5762"
+    ]
+    print("Lanzando Mission Planner:", " ".join(cmd_mp))
+    subprocess.Popen(cmd_mp, cwd=os.path.dirname(mp_exe), creationflags=flags)
+
+    print("¡Todo levantado correctamente!")
+
+if __name__ == "__main__":
+    main()
+>>>>>>> 2013fb8 (Juego funcional)
 
 def install_dependencies():
     # Instala las bibliotecas necesarias si no están instaladas
@@ -199,8 +275,13 @@ def showcheckpoint():
         widget.destroy()
 
     # Crear CheckpointScreen en frame_CheckPoint
+<<<<<<< HEAD
     checkpoint_screen = CheckpointScreen(dron, frame_CheckPoint)
     boton_volver4 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30),
+=======
+    checkpoint_screen = CheckpointScreen(dron, dron2, frame_CheckPoint)
+    boton_volver4 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 20),
+>>>>>>> 2013fb8 (Juego funcional)
                                   fg_color="transparent", hover=False, command=volver_menu)
     boton_volver4.place(relx=0.01, rely=0.95, anchor="sw")
     # Mostrar el frame del checkpoint
@@ -231,7 +312,7 @@ def showmap():
     # Lo ajustamos para que ocupe todo el espacio
     map_frame.pack(fill="both", expand=True)
 
-    boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30),
+    boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 20),
                                   fg_color="transparent", hover=False, command=volver_menu)
     boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
 
@@ -246,14 +327,14 @@ boton_editorMap.place(relx=0.85, rely=0.95, anchor="s")
 boton_editorMap._text_label.configure(wraplength=400)
 
 # Botón para volver al título
-boton_volver = ctk.CTkButton(master=frame_menu, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_titulo)
+boton_volver = ctk.CTkButton(master=frame_menu, text="Return", font=("M04_FATAL FURY", 20), fg_color="transparent", hover=False, command=volver_titulo)
 boton_volver.place(relx=0.01, rely=0.95, anchor="sw")
 
 # ================== CONTENIDO DEL TAG ==================
 label_tag = ctk.CTkLabel(master=frame_tag, text="Welcome to Tag mode!", font=("M04_FATAL FURY", 35))
 label_tag.pack(pady=20)
 
-boton_volver1 = ctk.CTkButton(master=frame_tag, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
+boton_volver1 = ctk.CTkButton(master=frame_tag, text="Return", font=("M04_FATAL FURY", 20), fg_color="transparent", hover=False, command=volver_menu)
 boton_volver1.place(relx=0.01, rely=0.95, anchor="sw")
 
 # ================== CONTENIDO DEL CHECKPOINT ==================
