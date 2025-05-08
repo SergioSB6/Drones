@@ -4,7 +4,8 @@ from PIL import Image, ImageTk
 import os
 import json
 import math
-
+import random
+import tkinter as tk
 
 class MapFrameClass:
     def __init__(self, dron, fatherFrame):
@@ -66,6 +67,17 @@ class MapFrameClass:
         self.draw_grid()
         self.map_canvas.bind("<Button-1>", self.select_obstacle)
         self.map_canvas.bind("<Button-3>", self.add_marker_event)
+        self.checkpoints_label = ctk.CTkLabel(self.control_panel, text="Num. Checkpoints:")
+        self.checkpoints_label.pack(pady=(20, 5))
+
+        # Spinbox nativo de Tkinter
+        self.checkpoints_spinbox = tk.Spinbox(
+            self.control_panel,
+            from_=5,
+            to=100,
+            width=5  # ancho en caracteres
+        )
+        self.checkpoints_spinbox.pack(pady=(0, 10))
 
     def add_buttons(self):
         self.add_background_button = ctk.CTkButton(self.control_panel, text="Añadir Fondo", command=self.add_background)
@@ -119,47 +131,6 @@ class MapFrameClass:
         for row in range(num_rows):
             self.geofence_cells.add((mid_col_left, row))
             self.geofence_cells.add((mid_col_right, row))
-
-    # --- Funciones para convertir celdas a coordenadas GPS y construir el polígono de geofence ---
-
-    def cell_to_latlon(self, col, row):
-        """
-        Convierte una celda (col, row) en coordenadas GPS (lat, lon)
-        usando self.top_left_lat y self.top_left_lon como referencia.
-        Se asume que self.cell_size representa metros por celda.
-        """
-        delta_lat_m = row * self.cell_size
-        delta_lon_m = col * self.cell_size
-        dlat_deg = delta_lat_m / 111320.0
-        dlon_deg = delta_lon_m / (111320.0 * math.cos(math.radians(self.top_left_lat)))
-        lat = self.top_left_lat - dlat_deg
-        lon = self.top_left_lon + dlon_deg
-        return lat, lon
-
-    def build_geofence_polygon(self):
-        """
-        Construye un polígono (lista de diccionarios con lat y lon) que encierra
-        todas las celdas definidas en self.geofence_cells.
-        Se genera un rectángulo mínimo que cubre todas las celdas.
-        """
-        if not self.geofence_cells:
-            return []
-        cols = [col for col, row in self.geofence_cells]
-        rows = [row for col, row in self.geofence_cells]
-        min_col, max_col = min(cols), max(cols)
-        min_row, max_row = min(rows), max(rows)
-        # Para cubrir completamente las celdas, usamos max+1
-        lat1, lon1 = self.cell_to_latlon(min_col, min_row)
-        lat2, lon2 = self.cell_to_latlon(max_col + 1, min_row)
-        lat3, lon3 = self.cell_to_latlon(max_col + 1, max_row + 1)
-        lat4, lon4 = self.cell_to_latlon(min_col, max_row + 1)
-        polygon = [
-            {"lat": lat1, "lon": lon1},
-            {"lat": lat2, "lon": lon2},
-            {"lat": lat3, "lon": lon3},
-            {"lat": lat4, "lon": lon4},
-        ]
-        return polygon
 
     # --- Resto de métodos del editor de mapas ---
 
@@ -264,10 +235,58 @@ class MapFrameClass:
                 "occupied_cells": occupied_cells
             }
 
+            # === CHECKPOINTS ===
+            # 1) Leer cuántos pide el usuario
+            try:
+                n = max(5, int(self.checkpoints_spinbox.get()))
+            except ValueError:
+                n = 5
+
+                # 2) Dimensiones en celdas
+            num_cols = map_data["map_size"]["width"] // map_data["map_size"]["cell_size"]
+            num_rows = map_data["map_size"]["height"] // map_data["map_size"]["cell_size"]
+
+            # 3) Celdas prohibidas (geofence u ocupadas)
+            forbidden = {
+                            (c["col"], c["row"]) for c in map_data["geofence"]
+                        } | {
+                            (c["col"], c["row"]) for c in map_data["occupied_cells"]
+                        }
+
+            # 4) Todas las celdas libres
+            free_cells = [
+                (c, r)
+                for c in range(num_cols)
+                for r in range(num_rows)
+                if (c, r) not in forbidden
+            ]
+
+            # 5) Sólo originales hasta la columna 14 inclusive
+            max_orig_col = 14
+            left_cells = [(c, r) for (c, r) in free_cells if c <= max_orig_col]
+
+            # 6) Ajustar n al máximo disponible y tomar muestra
+            n = min(n, len(left_cells))
+            originals = random.sample(left_cells, n)
+
+            # 7) Construir pares original/mirror
+            checkpoint_pairs = []
+            for idx, (col, row) in enumerate(originals, start=1):
+                mirror_col = num_cols - 1 - col
+                checkpoint_pairs.append({
+                    "id": idx,
+                    "original": {"col": col, "row": row},
+                    "mirror": {"col": mirror_col, "row": row}
+                })
+
+            # 8) Guardar en el JSON
+            map_data["checkpoints"] = checkpoint_pairs
+
             with open(file_name, "w") as file:
                 json.dump(map_data, file, indent=4)
 
             messagebox.showinfo("Guardado", f"Mapa guardado correctamente en: {file_name}")
+
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al guardar el mapa: {e}")
 

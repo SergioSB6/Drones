@@ -21,118 +21,65 @@ from pymavlink import mavutil
 pyglet.options.win32_gdi_font = True
 pyglet.font.add_file('assets/m04fatal_fury/m04.ttf')
 
-"""
 def main():
-
-    # base_dir = os.path.dirname(os.path.abspath(__file__))
-    # print("Directorio base:", base_dir)
-    #
-    # # Construir la ruta relativa al ejecutable de Mission Planner
-    # # Suponiendo la siguiente estructura:
-    # # /miProyecto
-    # #    /MissionPlanner
-    # #         MissionPlanner.exe
-    # mp_exe = os.path.join(base_dir, "Mission Planner", "Mission Planner", "MissionPlanner.exe")
-    # print("Ruta Mission Planner:", mp_exe)
-    #
-    # # Verificar que el ejecutable exista
-    # if not os.path.exists(mp_exe):
-    #     print(f"Error: No se encontró MissionPlanner.exe en {mp_exe}")
-    #     return
-    #
-    # # Comando para iniciar Mission Planner en modo simulación y Copter Swarm - Multilink
-    # # Dependiendo de tu versión, podrían usarse parámetros como:
-    # # - /sim : Indica que se inicie en modo simulación
-    # # - /swarm o /multilink : Indica que se use el modo Copter Swarm – Multilink
-    # # Si es necesario, consulta la documentación de tu versión de Mission Planner
-    # cmd = [mp_exe, "/sim", "/multilink"]
-    # print("Ejecutando comando:", cmd)
-    #
-    # # Para que se abra en una nueva ventana de CMD, se usa el flag CREATE_NEW_CONSOLE (propio de Windows)
-    # creation_flags = subprocess.CREATE_NEW_CONSOLE
-    #
-    # # Ejecutar el comando
-    # subprocess.Popen(cmd, cwd=base_dir, creationflags=creation_flags)
-    #
-    # print("Mission Planner se ha lanzado en modo simulación Copter Swarm – Multilink.")
-
-
-
-if __name__ == "__main__":
-    main()
-
-def main():
-    # Obtiene el directorio base (la carpeta donde se encuentra este script)
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    print("Base dir:", base_dir)
+    print("Directorio base:", base_dir)
 
-    # Rutas relativas a los ejecutables y archivos necesarios
+    # Rutas a los ejecutables
     sitl_exe = os.path.join(base_dir, "Mission Planner", "sitl", "ArduCopter.exe")
-    print("Ruta SITL:", sitl_exe)
+    defaults  = os.path.join(base_dir, "Mission Planner", "sitl", "default_params", "copter.parm")
+    mp_exe    = os.path.join(base_dir, "Mission Planner", "Mission Planner", "MissionPlanner.exe")
 
-    defaults_path = os.path.join(base_dir, "Mission Planner", "sitl", "default_params", "copter.parm")
-    print("Ruta defaults:", defaults_path)
+    # Verificaciones
+    for path,name in [(sitl_exe,"SITL"), (defaults,"copter.parm"), (mp_exe,"Mission Planner")]:
+        if not os.path.isfile(path):
+            print(f"ERROR: No encontrado {name} en:\n  {path}")
+            return
 
-    mission_planner_exe = os.path.join(base_dir, "Mission Planner", "Mission Planner", "MissionPlanner.exe")
-    print("Ruta Mission Planner:", mission_planner_exe)
+    flags = subprocess.CREATE_NEW_CONSOLE
 
-    # Verificar si los archivos existen
-    for path, desc in [(sitl_exe, "SITL"), (defaults_path, "Defaults"), (mission_planner_exe, "Mission Planner")]:
-        if not os.path.exists(path):
-            print(f"Error: No se encontró {desc} en: {path}")
-
-    # Comando para la primera instancia de SITL (instance 0)
-    cmd_sitl_1 = [
+    # SITL 1 → puerto TCP 5762
+    cmd_sitl1 = [
         sitl_exe,
         "--model", "+",
-        "--speedup", "1",
+        "--speedup", "3",
         "--instance", "0",
-        "--defaults", defaults_path
+        "--defaults", defaults,
+        "--home", "41.276358174374515, 1.988269781384222,3,0",
+        "-P", "SYSID_THISMAV=1",
 
     ]
-
-    # Comando para la segunda instancia de SITL (instance 1)
-    cmd_sitl_2 = [
-        sitl_exe,
-        "--model", "+",
-        "--speedup", "1",
-        "--instance", "1",
-        "--defaults", defaults_path,
-        "--home", "41.276267,1.988389,3,0"
-    ]
-
-    print("Lanzando SITL para Drone 1...")
-    process_sitl1 = subprocess.Popen(cmd_sitl_1, cwd=base_dir)
-    time.sleep(2)  # Espera para que se inicie la primera instancia
-
-    print("Lanzando SITL para Drone 2...")
-    process_sitl2 = subprocess.Popen(cmd_sitl_2, cwd=base_dir)
+    print("Lanzando SITL #1:", " ".join(cmd_sitl1))
+    subprocess.Popen(cmd_sitl1, cwd=base_dir, creationflags=flags)
     time.sleep(2)
 
-    # Comando para Mission Planner - para la instancia 0 (puerto 5760)
-    cmd_mp_1 = [
-        mission_planner_exe,
-        "/connect", "tcp:127.0.0.1:5760"
+    # SITL 2 → puerto TCP 5772
+    cmd_sitl2 = [
+        sitl_exe,
+        "--model", "+",
+        "--speedup", "3",
+        "--instance", "1",
+        "--defaults", defaults,
+        "--home", "41.27622147922305, 1.9883288804776904,3,0",
+        "-P", "SYSID_THISMAV=2",
+
     ]
-    # Comando para Mission Planner - para la instancia 1 (puerto 5770)
-    cmd_mp_2 = [
-        mission_planner_exe,
-        "/connect", "tcp:127.0.0.1:5770"
+    print("Lanzando SITL #2:", " ".join(cmd_sitl2))
+    subprocess.Popen(cmd_sitl2, cwd=base_dir, creationflags=flags)
+    time.sleep(2)
+
+    # Una sola Mission Planner → conectar al puerto 5762 (puedes cambiarlo a 5772 si quieres)
+    cmd_mp = [
+        mp_exe,
+        "/connect", "tcp:127.0.0.1:5762"
     ]
+    print("Lanzando Mission Planner:", " ".join(cmd_mp))
+    subprocess.Popen(cmd_mp, cwd=os.path.dirname(mp_exe), creationflags=flags)
 
-    print("Lanzando Mission Planner para Drone 1...")
-    process_mp1 = subprocess.Popen(cmd_mp_1, cwd=base_dir)
-    time.sleep(1)
-
-    print("Lanzando Mission Planner para Drone 2...")
-    process_mp2 = subprocess.Popen(cmd_mp_2, cwd=base_dir)
-
-    print("Todas las instancias se han lanzado correctamente.")
-
+    print("¡Todo levantado correctamente!")
 
 if __name__ == "__main__":
     main()
-"""
 
 def install_dependencies():
     # Instala las bibliotecas necesarias si no están instaladas
@@ -359,7 +306,7 @@ def showcheckpoint():
 
     # Crear CheckpointScreen en frame_CheckPoint
     checkpoint_screen = CheckpointScreen(dron, dron2, frame_CheckPoint)
-    boton_volver4 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 30),
+    boton_volver4 = ctk.CTkButton(master=frame_CheckPoint, text="Return", font=("M04_FATAL FURY", 20),
                                   fg_color="transparent", hover=False, command=volver_menu)
     boton_volver4.place(relx=0.01, rely=0.95, anchor="sw")
     # Mostrar el frame del checkpoint
@@ -389,7 +336,7 @@ def showmap():
     # Lo ajustamos para que ocupe todo el espacio
     map_frame.pack(fill="both", expand=True)
 
-    boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 30),
+    boton_volver3 = ctk.CTkButton(master=frame_Editor_mapas, text="Return", font=("M04_FATAL FURY", 20),
                                   fg_color="transparent", hover=False, command=volver_menu)
     boton_volver3.place(relx=0.01, rely=0.95, anchor="sw")
 
@@ -404,14 +351,14 @@ boton_editorMap.place(relx=0.85, rely=0.95, anchor="s")
 boton_editorMap._text_label.configure(wraplength=400)
 
 # Botón para volver al título
-boton_volver = ctk.CTkButton(master=frame_menu, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_titulo)
+boton_volver = ctk.CTkButton(master=frame_menu, text="Return", font=("M04_FATAL FURY", 20), fg_color="transparent", hover=False, command=volver_titulo)
 boton_volver.place(relx=0.01, rely=0.95, anchor="sw")
 
 # ================== CONTENIDO DEL TAG ==================
 label_tag = ctk.CTkLabel(master=frame_tag, text="Welcome to Tag mode!", font=("M04_FATAL FURY", 35))
 label_tag.pack(pady=20)
 
-boton_volver1 = ctk.CTkButton(master=frame_tag, text="Return", font=("M04_FATAL FURY", 30), fg_color="transparent", hover=False, command=volver_menu)
+boton_volver1 = ctk.CTkButton(master=frame_tag, text="Return", font=("M04_FATAL FURY", 20), fg_color="transparent", hover=False, command=volver_menu)
 boton_volver1.place(relx=0.01, rely=0.95, anchor="sw")
 
 # ================== CONTENIDO DEL CHECKPOINT ==================

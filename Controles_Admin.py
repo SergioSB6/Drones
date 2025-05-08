@@ -68,6 +68,7 @@ class ControlesAdmin:
         """
         Ejecuta el retorno a casa (RTL) de forma no bloqueante.
         """
+        self.dron.setNavSpeed(1)
         if self.dron.going:
             self.dron.stopGo()
         self.dron.RTL(blocking=False, callback=self.informar, params='EN CASA')
